@@ -1,12 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore.Storage;
-
-namespace ÖdevDağıtım.API.Repositories
+﻿namespace ÖdevDağıtım.API.Repositories
 {
-    public interface IUnitOfWork : IAsyncDisposable
+    public interface IUnitOfWork : IDisposable
     {
-        Task<int> CommitAsync();
-        void Commit();
+        ICourseRepository Courses { get; }
+        IAssignmentRepository Assignments { get; }
+        ISubmissionRepository Submissions { get; }
 
-        Task<IDbContextTransaction> BeginTransactionAsync();
+        Task<int> CompleteAsync();
     }
 }

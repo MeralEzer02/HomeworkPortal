@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Storage;
-using ÖdevDağıtım.API.Data;
+﻿using ÖdevDağıtım.API.Data;
 
 namespace ÖdevDağıtım.API.Repositories
 {
@@ -7,29 +6,29 @@ namespace ÖdevDağıtım.API.Repositories
     {
         private readonly AppDbContext _context;
 
-        public UnitOfWork(AppDbContext context)
+        public ICourseRepository Courses { get; }
+        public IAssignmentRepository Assignments { get; }
+        public ISubmissionRepository Submissions { get; }
+
+        public UnitOfWork(AppDbContext context,
+                          ICourseRepository courseRepository,
+                          IAssignmentRepository assignmentRepository,
+                          ISubmissionRepository submissionRepository)
         {
             _context = context;
+            Courses = courseRepository;
+            Assignments = assignmentRepository;
+            Submissions = submissionRepository;
         }
 
-        public void Commit()
-        {
-            _context.SaveChanges();
-        }
-
-        public async Task<int> CommitAsync()
+        public async Task<int> CompleteAsync()
         {
             return await _context.SaveChangesAsync();
         }
 
-        public async Task<IDbContextTransaction> BeginTransactionAsync()
+        public void Dispose()
         {
-            return await _context.Database.BeginTransactionAsync();
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await _context.DisposeAsync();
+            _context.Dispose();
         }
     }
 }

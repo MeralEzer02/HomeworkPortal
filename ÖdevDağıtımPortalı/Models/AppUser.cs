@@ -8,7 +8,7 @@ namespace ÖdevDağıtım.API.Models
         public string LastName { get; set; }
         public string FullName => $"{FirstName} {LastName}";
         public bool IsActive { get; set; } = true;
-
+        public bool IsDeleted { get; set; } = false;
         public ICollection<Course> Courses { get; set; }
         public ICollection<Submission> Submissions { get; set; }
         public ICollection<Notification> Notifications { get; set; }
