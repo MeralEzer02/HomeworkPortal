@@ -1,10 +1,11 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using ÖdevDaðýtým.API.Data;
 using ÖdevDaðýtým.API.Models;
 using ÖdevDaðýtým.API.Repositories;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
+using ÖdevDaðýtým.API.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -78,6 +79,8 @@ builder.Services.AddScoped<ÖdevDaðýtým.API.Services.IAuthService, ÖdevDaðýtým.AP
 builder.Services.AddHttpContextAccessor();
 // CurrentUserService Kaydý
 builder.Services.AddScoped<ÖdevDaðýtým.API.Services.ICurrentUserService, ÖdevDaðýtým.API.Services.CurrentUserService>();
+
+builder.Services.AddScoped<IFileService, FileService>();
 
 builder.Services.AddEndpointsApiExplorer();
 

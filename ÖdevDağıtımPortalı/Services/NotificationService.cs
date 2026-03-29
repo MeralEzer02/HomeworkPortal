@@ -30,6 +30,33 @@ namespace ÖdevDağıtım.API.Services
             await _unitOfWork.CompleteAsync();
         }
 
+        public async Task CreateNotificationsAsync(IEnumerable<string> userIds, string message)
+        {
+            var userIdList = userIds.ToList();
+            if (!userIdList.Any()) return;
+
+            var notifications = userIdList.Select(userId => new Notification
+            {
+                UserId = userId,
+                Message = message,
+                IsRead = false
+            }).ToList();
+
+            const int chunkSize = 100;
+
+            for (int i = 0; i < notifications.Count; i += chunkSize)
+            {
+                var chunk = notifications.Skip(i).Take(chunkSize);
+
+                foreach (var notif in chunk)
+                {
+                    await _unitOfWork.Notifications.AddAsync(notif);
+                }
+
+                await _unitOfWork.CompleteAsync();
+            }
+        }
+
         public async Task<PagedResult<NotificationReadDto>> GetUserNotificationsAsync(string userId, PaginationParams paginationParams)
         {
             var query = _unitOfWork.Notifications

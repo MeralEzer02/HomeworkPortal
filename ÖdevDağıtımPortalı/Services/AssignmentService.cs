@@ -45,13 +45,11 @@ namespace ÖdevDağıtım.API.Services
             {
                 try
                 {
-                    foreach (var student in courseWithStudents.Students)
-                    {
-                        await _notificationService.CreateNotificationAsync(
-                            student.Id,
-                            $"{courseWithStudents.Name} dersine yeni bir ödev eklendi: {assignment.Title}. Son Teslim: {assignment.DueDate.ToShortDateString()}"
-                        );
-                    }
+                    var studentIds = courseWithStudents.Students.Select(s => s.Id).ToList();
+                    await _notificationService.CreateNotificationsAsync(
+                        studentIds,
+                        $"{courseWithStudents.Name} dersine yeni bir ödev eklendi: {assignment.Title}. Son Teslim: {assignment.DueDate.ToShortDateString()}"
+                    );
                 }
                 catch (Exception)
                 {

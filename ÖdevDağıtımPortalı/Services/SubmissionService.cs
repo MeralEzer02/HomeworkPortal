@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ÖdevDağıtım.API.DTOs;
 using ÖdevDağıtım.API.Models;
 using ÖdevDağıtım.API.Repositories;
+using Microsoft.AspNetCore.Http;
 
 namespace ÖdevDağıtım.API.Services
 {
@@ -12,13 +13,15 @@ namespace ÖdevDağıtım.API.Services
         private readonly IMapper _mapper;
         private readonly ICurrentUserService _currentUserService;
         private readonly INotificationService _notificationService;
+        private readonly IFileService _fileService;
 
-        public SubmissionService(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUserService currentUserService, INotificationService notificationService)
+        public SubmissionService(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUserService currentUserService, INotificationService notificationService, IFileService fileService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _currentUserService = currentUserService;
             _notificationService = notificationService;
+            _fileService = fileService;
         }
 
         public async Task<SubmissionReadDto> SubmitAssignmentAsync(SubmissionCreateDto dto)
@@ -43,6 +46,11 @@ namespace ÖdevDağıtım.API.Services
             submission.StudentId = studentId;
             submission.SubmissionDate = DateTime.UtcNow;
 
+            if (dto.File != null)
+            {
+                submission.FilePath = await _fileService.UploadFileAsync(dto.File, "submissions");
+            }
+
             try
             {
                 await _unitOfWork.Submissions.AddAsync(submission);
@@ -50,6 +58,11 @@ namespace ÖdevDağıtım.API.Services
             }
             catch (DbUpdateException ex)
             {
+                if (!string.IsNullOrEmpty(submission.FilePath))
+                {
+                    _fileService.DeleteFile(submission.FilePath);
+                }
+
                 throw new Exception("Bu ödev için zaten bir teslimat yaptınız. (Çoklu gönderim engellendi.)", ex);
             }
 
