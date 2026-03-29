@@ -121,7 +121,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseMiddleware<ÖdevDaðýtým.API.Middlewares.GlobalExceptionMiddleware>();
+
 app.UseHttpsRedirection();
+
+app.UseStaticFiles();
 
 // Kimlik Doðrulama
 app.UseAuthentication();

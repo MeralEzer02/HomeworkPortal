@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 namespace ÖdevDağıtım.API.Services
 {
     public class SubmissionService : ISubmissionService
-    {
+    {      
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICurrentUserService _currentUserService;
