@@ -1,0 +1,12 @@
+﻿using HomeworkPortal.API.DTOs;
+
+namespace HomeworkPortal.API.Services
+{
+    public interface INotificationService
+    {
+        Task CreateNotificationAsync(string userId, string message);
+        Task CreateNotificationsAsync(IEnumerable<string> userIds, string message);
+        Task<PagedResult<NotificationReadDto>> GetUserNotificationsAsync(string userId, PaginationParams paginationParams);
+        Task MarkAsReadAsync(int id);
+    }
+}
