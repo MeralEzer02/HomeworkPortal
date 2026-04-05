@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using HomeworkPortal.API.DTOs;
 using HomeworkPortal.API.Models;
 using HomeworkPortal.API.Repositories;
+using HomeworkPortal.API.Helpers; // RetryHelper'ı kullanmak için eklendi
 
 namespace HomeworkPortal.API.Services
 {
@@ -10,11 +12,15 @@ namespace HomeworkPortal.API.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        // 1. Zırh için Logger ekliyoruz
+        private readonly ILogger<NotificationService> _logger;
 
-        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper)
+        // Constructor'a ILogger'ı dahil ediyoruz
+        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, ILogger<NotificationService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _logger = logger;
         }
 
         public async Task CreateNotificationAsync(string userId, string message)
@@ -26,8 +32,15 @@ namespace HomeworkPortal.API.Services
                 IsRead = false
             };
 
-            await _unitOfWork.Notifications.AddAsync(notification);
-            await _unitOfWork.CompleteAsync();
+            // 2. Polly Zırhını oluşturuyoruz
+            var retryPolicy = RetryHelper.CreateRetryPolicy(_logger);
+
+            // 3. Veritabanı işlemini zırhın içinde (ExecuteAsync) çalıştırıyoruz
+            await retryPolicy.ExecuteAsync(async () =>
+            {
+                await _unitOfWork.Notifications.AddAsync(notification);
+                await _unitOfWork.CompleteAsync();
+            });
         }
 
         public async Task CreateNotificationsAsync(IEnumerable<string> userIds, string message)
@@ -44,16 +57,22 @@ namespace HomeworkPortal.API.Services
 
             const int chunkSize = 100;
 
+            // Polly
+            var retryPolicy = RetryHelper.CreateRetryPolicy(_logger);
+
             for (int i = 0; i < notifications.Count; i += chunkSize)
             {
                 var chunk = notifications.Skip(i).Take(chunkSize);
 
-                foreach (var notif in chunk)
+                // Toplu kaydetme işlemi
+                await retryPolicy.ExecuteAsync(async () =>
                 {
-                    await _unitOfWork.Notifications.AddAsync(notif);
-                }
-
-                await _unitOfWork.CompleteAsync();
+                    foreach (var notif in chunk)
+                    {
+                        await _unitOfWork.Notifications.AddAsync(notif);
+                    }
+                    await _unitOfWork.CompleteAsync();
+                });
             }
         }
 
