@@ -23,8 +23,9 @@ namespace HomeworkPortal.UI.Controllers
 
         public IActionResult Logout()
         {
-            HttpContext.Session.Remove("Token");
-            return RedirectToAction("Login");
+            HttpContext.Session.Clear();
+
+            return RedirectToAction("Login", "Auth");
         }
     }
 }

@@ -1,0 +1,170 @@
+﻿@{
+    ViewData["Title"] = "Kurslar";
+    var role = ViewBag.Role as string;
+}
+
+<div class="row g-4">
+    <div class="col-12">
+        <div class="bg-light rounded h-100 p-4">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h6 class="mb-0">
+                    @if (role == "Admin")
+                    {
+                        <text>Tüm Kurslar (Yönetici Paneli)</text>
+                    }
+                    else if (role == "Teacher")
+                    {
+
+                        <text>Verdiğim Dersler</text>
+                    }
+                    else
+                    {
+
+                        <text>Mevcut Kurslar</text>
+                    }
+                </h6>
+
+                @if (role == "Admin" || role == "Teacher")
+                {
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#courseModal">
+                        <i class="fa fa-plus me-2"></i>Yeni Kurs Oluştur
+                    </button>
+                }
+            </div>
+
+            <div class="table-responsive">
+                <table class="table text-start align-middle table-bordered table-hover mb-0">
+                    <thead>
+                        <tr class="text-dark">
+                            <th scope="col">Kurs Adı</th>
+                            <th scope="col">Açıklama</th>
+                            <th scope="col">Öğretmen</th>
+                            <th scope="col">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="courseTableBody">
+                        @* AJAX ile dolacak *@
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Kurs Ekleme Modalı *@
+<div class="modal fade" id="courseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Kurs Bilgileri</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="courseForm">
+                    <div class="mb-3">
+                        <label class="form-label">Kurs Adı</label>
+                        <input type="text" id="courseName" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <textarea id="courseDesc" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" id="btnSave">Kaydet</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const API_BASE = "https://localhost:7113/api/Courses"; // API Portunu kontrol et
+        const USER_ROLE = "@role";
+
+        $(document).ready(function () {
+            loadCourses();
+
+            // 6. AJAX STANDARDI: Form Gönderimi
+            $("#courseForm").on("submit", function (e) {
+                e.preventDefault();
+                const data = {
+                    name: $("#courseName").val(),
+                    description: $("#courseDesc").val()
+                };
+
+                $.ajax({
+                    url: API_BASE,
+                    method: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify(data),
+                    beforeSend: function () { $("#btnSave").prop("disabled", true).text("İşleniyor..."); },
+                    success: function () {
+                        $("#courseModal").modal("hide");
+                        $("#courseForm")[0].reset();
+                        loadCourses();
+                    },
+                    error: function (err) { alert("Hata: " + (err.responseJSON?.message || "İşlem başarısız")); },
+                    complete: function () { $("#btnSave").prop("disabled", false).text("Kaydet"); }
+                });
+            });
+        });
+
+        function loadCourses() {
+            $.ajax({
+                url: API_BASE,
+                method: "GET",
+                beforeSend: function () { $("#courseTableBody").html('<tr><td colspan="4" class="text-center">Yükleniyor...</td></tr>'); },
+                success: function (res) {
+                    let html = "";
+                    // API PagedResult döndüğü için res.data'ya bakıyoruz
+                    const list = res.data || res;
+
+                    list.forEach(item => {
+                        html += `
+                            <tr>
+                                <td>${item.name}</td>
+                                <td>${item.description}</td>
+                                <td><span class="badge bg-secondary">${item.teacherFullName || 'Atanmadı'}</span></td>
+                                <td>
+                                    ${renderActions(item)}
+                                </td>
+                            </tr>`;
+                    });
+                    $("#courseTableBody").html(html);
+                }
+            });
+        }
+
+        // ROLE BASED BEHAVIOR: İşlem butonlarını yetkiye göre JS tarafında kurgula
+        function renderActions(item) {
+            let actions = `<a href="/Assignments?courseId=${item.id}" class="btn btn-sm btn-info">Ödevler</a> `;
+
+            if (USER_ROLE === "Admin") {
+                actions += `<button class="btn btn-sm btn-danger" onclick="deleteCourse(${item.id})">Sil</button>`;
+            } else if (USER_ROLE === "Student") {
+                // Not: Enroll işlemi için öğrencinin zaten kayıtlı olup olmadığını API kontrol eder (403/400 döner)
+                actions += `<button class="btn btn-sm btn-success" onclick="enroll(${item.id})">Kayıt Ol</button>`;
+            }
+            return actions;
+        }
+
+        function deleteCourse(id) {
+            if(confirm("Silmek istediğinize emin misiniz?")) {
+                $.ajax({
+                    url: `${API_BASE}/${id}`,
+                    method: "DELETE",
+                    success: function() { loadCourses(); }
+                });
+            }
+        }
+
+        function enroll(id) {
+            $.ajax({
+                url: `${API_BASE}/${id}/enroll`,
+                method: "POST",
+                success: function() { alert("Başarıyla kayıt oldunuz!"); loadCourses(); },
+                error: function(err) { alert(err.responseJSON?.message || "Kayıt olunamadı."); }
+            });
+        }
+    </script>
+}

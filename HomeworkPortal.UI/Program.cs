@@ -1,7 +1,10 @@
+using HomeworkPortal.UI.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 
+// 1. Session ve Token Okuma Ýþlemleri Ýçin Zorunlu Servisler
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSession(options => {
     options.IdleTimeout = TimeSpan.FromHours(2);
@@ -9,12 +12,15 @@ builder.Services.AddSession(options => {
     options.Cookie.IsEssential = true;
 });
 
-builder.Services.AddTransient<HomeworkPortal.UI.Services.AuthHeaderHandler>();
+// 2. Token Çözücü Servisimiz (Aþama 5 Kuralý)
+builder.Services.AddScoped<ITokenParserService, TokenParserService>();
 
-builder.Services.AddHttpClient<HomeworkPortal.UI.Services.ApiClient>(opt => {
+// 3. API Ýletiþim Katmaný (Backend'e giden istekleri yönetir)
+builder.Services.AddTransient<AuthHeaderHandler>();
+builder.Services.AddHttpClient<ApiClient>(opt => {
     opt.BaseAddress = new Uri("https://localhost:7113/");
 })
-.AddHttpMessageHandler<HomeworkPortal.UI.Services.AuthHeaderHandler>();
+.AddHttpMessageHandler<AuthHeaderHandler>();
 
 var app = builder.Build();
 
@@ -33,6 +39,5 @@ app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Auth}/{action=Login}/{id?}");
-
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 app.Run();

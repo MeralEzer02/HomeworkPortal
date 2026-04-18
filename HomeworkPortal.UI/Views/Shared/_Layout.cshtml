@@ -1,4 +1,4 @@
-﻿@@using Microsoft.AspNetCore.Http
+﻿@using Microsoft.AspNetCore.Http
 @using System.Text.Json
 @using System.Text
 @inject IHttpContextAccessor HttpContextAccessor
@@ -73,7 +73,7 @@
         <div class="sidebar pe-4 pb-3">
             <nav class="navbar bg-light navbar-light">
                 <a href="/" class="navbar-brand mx-4 mb-3">
-                    <h3 class="text-primary"><i class="fa fa-graduation-cap me-2"></i>HW Portal</h3>
+                    <h3 class="text-primary"><i class="fa fa-graduation-cap me-2"></i>Homework Portal</h3>
                 </a>
                 <div class="d-flex align-items-center ms-4 mb-4">
                     <div class="position-relative">
@@ -86,28 +86,23 @@
                     </div>
                 </div>
                 <div class="navbar-nav w-100">
-                    <a href="/" class="nav-item nav-link active"><i class="fa fa-tachometer-alt me-2"></i>Dashboard</a>
+                    <a href="/Home/Index" class="nav-item nav-link active"><i class="fa fa-tachometer-alt me-2"></i>Dashboard</a>
 
-                    @if (userRole == "Admin")
+                    <a href="/Courses" class="nav-item nav-link"><i class="fa fa-book me-2"></i>Kurslar</a>
+
+                    @if (userRole == "Teacher" || userRole == "Student" || userRole == "Admin")
                     {
-                        <a href="/Admin/Users" class="nav-item nav-link"><i class="fa fa-users me-2"></i>Kullanıcılar</a>
-                        <a href="/Admin/Courses" class="nav-item nav-link"><i class="fa fa-book me-2"></i>Kurslar</a>
+                        <a href="/Assignments" class="nav-item nav-link"><i class="fa fa-tasks me-2"></i>Ödevler</a>
                     }
 
-                    else if (userRole == "Teacher")
+                    @if (userRole == "Teacher" || userRole == "Student")
                     {
-                        <a href="/Teacher/Assignments" class="nav-item nav-link"><i class="fa fa-tasks me-2"></i>Ödev Yönetimi</a>
-                        <a href="/Teacher/Submissions" class="nav-item nav-link"><i class="fa fa-check-square me-2"></i>Teslimler</a>
-                    }
-
-                    else if (userRole == "Student")
-                    {
-                        <a href="/Student/MyAssignments" class="nav-item nav-link"><i class="fa fa-file-alt me-2"></i>Ödevlerim</a>
-                        <a href="/Student/Grades" class="nav-item nav-link"><i class="fa fa-star me-2"></i>Notlarım</a>
+                        <a href="/Submissions" class="nav-item nav-link"><i class="fa fa-check-square me-2"></i>Teslimler</a>
                     }
                 </div>
             </nav>
         </div>
+        <div class="content">
 
             <nav class="navbar navbar-expand bg-light navbar-light sticky-top px-4 py-0">
                 <a href="/" class="navbar-brand d-flex d-lg-none me-4">
@@ -120,11 +115,12 @@
                     <div class="nav-item dropdown">
                         <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
                             <img class="rounded-circle me-lg-2" src="~/AdminTheme/img/user.jpg" alt="" style="width: 40px; height: 40px;">
-                            <span class="d-none d-lg-inline-flex">Yönetici</span>
+                            <span class="d-none d-lg-inline-flex">@userEmail.Split('@')[0]</span>
                         </a>
                         <div class="dropdown-menu dropdown-menu-end bg-light border-0 rounded-0 rounded-bottom m-0">
-                            <a href="#" class="dropdown-item">Profilim</a>
-                            <a href="#" class="dropdown-item">Çıkış Yap</a>
+                            <a href="/Profile" class="dropdown-item">Profilim</a>
+                            <hr class="dropdown-divider">
+                            <a href="/Auth/Logout" class="dropdown-item text-danger">Çıkış Yap</a>
                         </div>
                     </div>
                 </div>
@@ -132,6 +128,7 @@
             <div class="container-fluid pt-4 px-4">
                 @RenderBody()
             </div>
+
             <div class="container-fluid pt-4 px-4 mt-auto">
                 <div class="bg-light rounded-top p-4">
                     <div class="row">
@@ -145,7 +142,7 @@
         <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"><i class="bi bi-arrow-up"></i></a>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/AdminTheme/lib/chart/chart.min.js"></script>
     <script src="~/AdminTheme/lib/easing/easing.min.js"></script>
@@ -156,6 +153,27 @@
     <script src="~/AdminTheme/lib/tempusdominus/js/tempusdominus-bootstrap-4.min.js"></script>
 
     <script src="~/AdminTheme/js/main.js"></script>
+
+    <script>
+        var jwtToken = "@Html.Raw(token)";
+
+        $.ajaxPrefilter(function (options, originalOptions, jqXHR) {
+            if (jwtToken && options.url.includes("7113")) {
+                jqXHR.setRequestHeader('Authorization', 'Bearer ' + jwtToken);
+            }
+        });
+
+        $(document).ajaxError(function (event, xhr, settings) {
+            if (settings.url.includes("7113")) {
+                if (xhr.status === 401) {
+                    alert("Oturum süreniz doldu veya geçersiz. Lütfen tekrar giriş yapın.");
+                    window.location.href = "/Auth/Login";
+                } else if (xhr.status === 403) {
+                    alert("Bu işlemi gerçekleştirmek için yetkiniz bulunmamaktadır.");
+                }
+            }
+        });
+    </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
