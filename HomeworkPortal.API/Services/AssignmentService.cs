@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using HomeworkPortal.API.DTOs;
 using HomeworkPortal.API.Models;
@@ -11,13 +12,15 @@ namespace HomeworkPortal.API.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICurrentUserService _currentUserService;
+        private readonly UserManager<AppUser> _userManager; // YENİ EKLENDİ
         private readonly INotificationService _notificationService;
 
-        public AssignmentService(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUserService currentUserService, INotificationService notificationService)
+        public AssignmentService(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUserService currentUserService, UserManager<AppUser> userManager, INotificationService notificationService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _currentUserService = currentUserService;
+            _userManager = userManager; // YENİ EKLENDİ
             _notificationService = notificationService;
         }
 
@@ -29,7 +32,11 @@ namespace HomeworkPortal.API.Services
             var course = await _unitOfWork.Courses.GetByIdAsync(dto.CourseId);
             if (course == null) throw new Exception("Ders bulunamadı.");
 
-            if (course.TeacherId != _currentUserService.UserId)
+            // 👑 ADMIN KONTROLÜ
+            var user = await _userManager.FindByIdAsync(_currentUserService.UserId);
+            var isAdmin = user != null && await _userManager.IsInRoleAsync(user, "Admin");
+
+            if (course.TeacherId != _currentUserService.UserId && !isAdmin)
                 throw new UnauthorizedAccessException("Sadece kendi dersinize ödev ekleyebilirsiniz.");
 
             var assignment = _mapper.Map<Assignment>(dto);
@@ -67,7 +74,11 @@ namespace HomeworkPortal.API.Services
             var assignment = await _unitOfWork.Assignments.Where(a => a.Id == id, a => a.Course).FirstOrDefaultAsync();
             if (assignment == null) throw new Exception("Ödev bulunamadı.");
 
-            if (assignment.Course.TeacherId != _currentUserService.UserId)
+            // 👑 ADMIN KONTROLÜ
+            var user = await _userManager.FindByIdAsync(_currentUserService.UserId);
+            var isAdmin = user != null && await _userManager.IsInRoleAsync(user, "Admin");
+
+            if (assignment.Course.TeacherId != _currentUserService.UserId && !isAdmin)
                 throw new UnauthorizedAccessException("Sadece kendi dersinizin ödevini güncelleyebilirsiniz.");
 
             _mapper.Map(dto, assignment);
@@ -79,7 +90,11 @@ namespace HomeworkPortal.API.Services
             var assignment = await _unitOfWork.Assignments.Where(a => a.Id == id, a => a.Course).FirstOrDefaultAsync();
             if (assignment == null) throw new Exception("Ödev bulunamadı.");
 
-            if (assignment.Course.TeacherId != _currentUserService.UserId)
+            // 👑 ADMIN KONTROLÜ
+            var user = await _userManager.FindByIdAsync(_currentUserService.UserId);
+            var isAdmin = user != null && await _userManager.IsInRoleAsync(user, "Admin");
+
+            if (assignment.Course.TeacherId != _currentUserService.UserId && !isAdmin)
                 throw new UnauthorizedAccessException("Sadece kendi dersinizin ödevini silebilirsiniz.");
 
             assignment.IsDeleted = true;
@@ -91,7 +106,6 @@ namespace HomeworkPortal.API.Services
             var query = _unitOfWork.Assignments.Where(a => a.CourseId == courseId && !a.IsDeleted);
             var totalCount = await query.CountAsync();
 
-            // 🚀 SENIOR DOKUNUŞU (9.1 & 9.2): DB Projection - Sadece DTO'nun ihtiyaç duyduğu alanları SELECT ediyoruz.
             var dtoList = await query
                 .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
                 .Take(paginationParams.PageSize)
@@ -115,7 +129,6 @@ namespace HomeworkPortal.API.Services
             var query = _unitOfWork.Assignments.Where(a => courses.Contains(a.CourseId) && !a.IsDeleted);
             var totalCount = await query.CountAsync();
 
-            // 🚀 SENIOR DOKUNUŞU (9.1 & 9.2): DB Projection - AutoMapper'ın RAM'i şişirmesini engelledik.
             var dtoList = await query
                 .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
                 .Take(paginationParams.PageSize)

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using HomeworkPortal.API.DTOs;
 using HomeworkPortal.API.Models;
@@ -13,15 +14,17 @@ namespace HomeworkPortal.API.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICurrentUserService _currentUserService;
+        private readonly UserManager<AppUser> _userManager; // YENİ EKLENDİ
         private readonly INotificationService _notificationService;
         private readonly IFileService _fileService;
         private readonly ILogger<SubmissionService> _logger;
 
-        public SubmissionService(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUserService currentUserService, INotificationService notificationService, IFileService fileService, ILogger<SubmissionService> logger)
+        public SubmissionService(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUserService currentUserService, UserManager<AppUser> userManager, INotificationService notificationService, IFileService fileService, ILogger<SubmissionService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _currentUserService = currentUserService;
+            _userManager = userManager; // YENİ EKLENDİ
             _notificationService = notificationService;
             _fileService = fileService;
             _logger = logger;
@@ -82,7 +85,11 @@ namespace HomeworkPortal.API.Services
 
             if (submission == null) throw new Exception("Teslimat bulunamadı.");
 
-            if (submission.Assignment.Course.TeacherId != _currentUserService.UserId)
+            // 👑 ADMIN KONTROLÜ
+            var user = await _userManager.FindByIdAsync(_currentUserService.UserId);
+            var isAdmin = user != null && await _userManager.IsInRoleAsync(user, "Admin");
+
+            if (submission.Assignment.Course.TeacherId != _currentUserService.UserId && !isAdmin)
                 throw new UnauthorizedAccessException("Sadece kendi dersinize ait ödevleri notlandırabilirsiniz.");
 
             if (dto.RowVersion != null && dto.RowVersion.Length > 0)

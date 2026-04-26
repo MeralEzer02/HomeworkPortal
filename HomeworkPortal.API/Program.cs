@@ -204,12 +204,12 @@ app.MapControllers().RequireRateLimiting("api");
 
 app.MapMetrics();
 
-using (var scope = app.Services.CreateScope())
-{
-    var userManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<HomeworkPortal.API.Models.AppUser>>();
-    var roleManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.RoleManager<HomeworkPortal.API.Models.AppRole>>();
+//using (var scope = app.Services.CreateScope())
+//{
+    //var userManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<HomeworkPortal.API.Models.AppUser>>();
+    //var roleManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.RoleManager<HomeworkPortal.API.Models.AppRole>>();
 
-    await HomeworkPortal.API.Data.DbSeeder.SeedDataAsync(userManager, roleManager);
-}
+    //await HomeworkPortal.API.Data.DbSeeder.SeedDataAsync(userManager, roleManager);
+//}
 
 app.Run();

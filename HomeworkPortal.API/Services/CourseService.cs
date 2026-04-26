@@ -40,7 +40,11 @@ namespace HomeworkPortal.API.Services
             var course = await _unitOfWork.Courses.GetByIdAsync(id);
             if (course == null) throw new Exception("Ders bulunamadı.");
 
-            if (course.TeacherId != _currentUserService.UserId)
+            // 👑 ADMIN KONTROLÜ
+            var user = await _userManager.FindByIdAsync(_currentUserService.UserId);
+            var isAdmin = user != null && await _userManager.IsInRoleAsync(user, "Admin");
+
+            if (course.TeacherId != _currentUserService.UserId && !isAdmin)
                 throw new UnauthorizedAccessException("Sadece kendi açtığınız dersi güncelleyebilirsiniz.");
 
             _mapper.Map(dto, course);
@@ -52,7 +56,11 @@ namespace HomeworkPortal.API.Services
             var course = await _unitOfWork.Courses.GetByIdAsync(id);
             if (course == null) throw new Exception("Ders bulunamadı.");
 
-            if (course.TeacherId != _currentUserService.UserId)
+            // 👑 ADMIN KONTROLÜ
+            var user = await _userManager.FindByIdAsync(_currentUserService.UserId);
+            var isAdmin = user != null && await _userManager.IsInRoleAsync(user, "Admin");
+
+            if (course.TeacherId != _currentUserService.UserId && !isAdmin)
                 throw new UnauthorizedAccessException("Sadece kendi açtığınız dersi silebilirsiniz.");
 
             course.IsDeleted = true;
@@ -61,7 +69,20 @@ namespace HomeworkPortal.API.Services
 
         public async Task<PagedResult<CourseReadDto>> GetCoursesAsync(PaginationParams paginationParams)
         {
-            var query = _unitOfWork.Courses.GetAll();
+            var userId = _currentUserService.UserId;
+            var user = await _userManager.FindByIdAsync(userId);
+            var isAdmin = user != null && await _userManager.IsInRoleAsync(user, "Admin");
+            var isTeacher = user != null && await _userManager.IsInRoleAsync(user, "Teacher");
+
+            var query = _unitOfWork.Courses.GetAll(c => c.Teacher).AsQueryable();
+
+            // 🚀 İŞTE DÜZELTİLEN YER: Eğer öğretmense ve Admin değilse, SADECE kendi derslerini görecek!
+            if (isTeacher && !isAdmin)
+            {
+                query = query.Where(c => c.TeacherId == userId);
+            }
+            // Not: Öğrenciler derslere "Kayıt Ol" diyebilsinler diye onlara tüm listeyi açık bırakıyoruz.
+
             var totalCount = await query.CountAsync();
 
             var courses = await query
@@ -76,7 +97,7 @@ namespace HomeworkPortal.API.Services
 
         public async Task<CourseReadDto> GetCourseDetailsAsync(int id)
         {
-            var course = await _unitOfWork.Courses.GetByIdAsync(id);
+            var course = await _unitOfWork.Courses.Where(c => c.Id == id, c => c.Teacher).FirstOrDefaultAsync();
             return _mapper.Map<CourseReadDto>(course);
         }
 
@@ -105,7 +126,7 @@ namespace HomeworkPortal.API.Services
             catch (Exception)
             {
             }
-        }  
+        }
 
         public async Task AssignTeacherAsync(int courseId, string teacherId)
         {

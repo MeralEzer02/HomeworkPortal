@@ -14,12 +14,10 @@
                     }
                     else if (role == "Teacher")
                     {
-
                         <text>Verdiğim Dersler</text>
                     }
                     else
                     {
-
                         <text>Mevcut Kurslar</text>
                     }
                 </h6>
@@ -34,11 +32,12 @@
 
             <div class="table-responsive">
                 <table class="table text-start align-middle table-bordered table-hover mb-0">
-                    <thead>
-                        <tr class="text-dark">
+                    <thead class="table-dark">
+                        <tr>
                             <th scope="col">Kurs Adı</th>
                             <th scope="col">Açıklama</th>
                             <th scope="col">Öğretmen</th>
+                            <th scope="col">Oluşturulma Tarihi</th>
                             <th scope="col">İşlem</th>
                         </tr>
                     </thead>
@@ -54,19 +53,19 @@
 @* Kurs Ekleme Modalı *@
 <div class="modal fade" id="courseModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">Kurs Bilgileri</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="courseForm">
                     <div class="mb-3">
-                        <label class="form-label">Kurs Adı</label>
+                        <label class="form-label fw-bold">Kurs Adı</label>
                         <input type="text" id="courseName" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Açıklama</label>
+                        <label class="form-label fw-bold">Açıklama</label>
                         <textarea id="courseDesc" class="form-control" rows="3" required></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary w-100" id="btnSave">Kaydet</button>
@@ -76,15 +75,43 @@
     </div>
 </div>
 
+@* Kurs Düzenleme Modalı *@
+<div class="modal fade" id="editCourseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">Kursu Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editCourseForm">
+                    <input type="hidden" id="editCourseId">
+                    <input type="hidden" id="editRowVersion">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Kurs Adı</label>
+                        <input type="text" id="editCourseName" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Açıklama</label>
+                        <textarea id="editCourseDesc" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 fw-bold" id="btnUpdate">Güncelle</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
-        const API_BASE = "https://localhost:7113/api/Courses"; // API Portunu kontrol et
+        const API_BASE = "https://localhost:7113/api/Courses";
         const USER_ROLE = "@role";
+        let globalCourses = [];
 
         $(document).ready(function () {
             loadCourses();
 
-            // 6. AJAX STANDARDI: Form Gönderimi
+            // KURS EKLEME
             $("#courseForm").on("submit", function (e) {
                 e.preventDefault();
                 const data = {
@@ -101,10 +128,39 @@
                     success: function () {
                         $("#courseModal").modal("hide");
                         $("#courseForm")[0].reset();
+                        showToast("Başarılı", "Kurs başarıyla oluşturuldu.", "success");
                         loadCourses();
                     },
-                    error: function (err) { alert("Hata: " + (err.responseJSON?.message || "İşlem başarısız")); },
+                    error: function (err) { handleError(err); },
                     complete: function () { $("#btnSave").prop("disabled", false).text("Kaydet"); }
+                });
+            });
+
+            // KURS GÜNCELLEME
+            $("#editCourseForm").on("submit", function (e) {
+                e.preventDefault();
+                const id = $("#editCourseId").val();
+
+                const data = {
+                    id: parseInt(id), // API'NİN BEKLEDİĞİ EKSİK ID EKLENDİ
+                    name: $("#editCourseName").val(),
+                    description: $("#editCourseDesc").val(),
+                    rowVersion: $("#editRowVersion").val() || null
+                };
+
+                $.ajax({
+                    url: `${API_BASE}/${id}`,
+                    method: "PUT",
+                    contentType: "application/json",
+                    data: JSON.stringify(data),
+                    beforeSend: function () { $("#btnUpdate").prop("disabled", true).text("Güncelleniyor..."); },
+                    success: function () {
+                        $("#editCourseModal").modal("hide");
+                        showToast("Başarılı", "Kurs başarıyla güncellendi.", "success");
+                        loadCourses();
+                    },
+                    error: function (err) { handleError(err); },
+                    complete: function () { $("#btnUpdate").prop("disabled", false).text("Güncelle"); }
                 });
             });
         });
@@ -113,37 +169,53 @@
             $.ajax({
                 url: API_BASE,
                 method: "GET",
-                beforeSend: function () { $("#courseTableBody").html('<tr><td colspan="4" class="text-center">Yükleniyor...</td></tr>'); },
+                beforeSend: function () { $("#courseTableBody").html('<tr><td colspan="5" class="text-center"><div class="spinner-border text-primary spinner-border-sm"></div> Yükleniyor...</td></tr>'); },
                 success: function (res) {
                     let html = "";
-                    // API PagedResult döndüğü için res.data'ya bakıyoruz
                     const list = res.data || res;
+                    globalCourses = list;
+
+                    if (!list || list.length === 0) {
+                        $("#courseTableBody").html('<tr><td colspan="5" class="text-center text-muted py-4">Sistemde henüz kurs bulunmamaktadır.</td></tr>');
+                        return;
+                    }
 
                     list.forEach(item => {
+                        const createdDate = new Date(item.created).toLocaleDateString('tr-TR');
                         html += `
                             <tr>
-                                <td>${item.name}</td>
+                                <td><strong>${item.name}</strong></td>
                                 <td>${item.description}</td>
                                 <td><span class="badge bg-secondary">${item.teacherFullName || 'Atanmadı'}</span></td>
-                                <td>
-                                    ${renderActions(item)}
-                                </td>
+                                <td>${createdDate}</td>
+                                <td>${renderActions(item)}</td>
                             </tr>`;
                     });
                     $("#courseTableBody").html(html);
-                }
+                },
+                error: function (err) { handleError(err); }
             });
         }
 
-        // ROLE BASED BEHAVIOR: İşlem butonlarını yetkiye göre JS tarafında kurgula
-        function renderActions(item) {
-            let actions = `<a href="/Assignments?courseId=${item.id}" class="btn btn-sm btn-info">Ödevler</a> `;
+        function openEditModal(id) {
+            const course = globalCourses.find(c => c.id === id);
+            if (course) {
+                $("#editCourseId").val(course.id);
+                $("#editCourseName").val(course.name);
+                $("#editCourseDesc").val(course.description);
+                $("#editRowVersion").val(course.rowVersion || "");
+                $("#editCourseModal").modal("show");
+            }
+        }
 
-            if (USER_ROLE === "Admin") {
-                actions += `<button class="btn btn-sm btn-danger" onclick="deleteCourse(${item.id})">Sil</button>`;
+        function renderActions(item) {
+            let actions = `<a href="/Assignments?courseId=${item.id}" class="btn btn-sm btn-info text-white me-1"><i class="fa fa-tasks me-1"></i>Ödevler</a>`;
+
+            if (USER_ROLE === "Admin" || USER_ROLE === "Teacher") {
+                actions += `<button class="btn btn-sm btn-warning me-1" onclick="openEditModal(${item.id})"><i class="fa fa-edit"></i></button>`;
+                actions += `<button class="btn btn-sm btn-danger" onclick="deleteCourse(${item.id})"><i class="fa fa-trash"></i></button>`;
             } else if (USER_ROLE === "Student") {
-                // Not: Enroll işlemi için öğrencinin zaten kayıtlı olup olmadığını API kontrol eder (403/400 döner)
-                actions += `<button class="btn btn-sm btn-success" onclick="enroll(${item.id})">Kayıt Ol</button>`;
+                actions += `<button class="btn btn-sm btn-success" onclick="enroll(${item.id})"><i class="fa fa-plus me-1"></i>Kayıt Ol</button>`;
             }
             return actions;
         }
@@ -153,7 +225,11 @@
                 $.ajax({
                     url: `${API_BASE}/${id}`,
                     method: "DELETE",
-                    success: function() { loadCourses(); }
+                    success: function() {
+                        showToast("Silindi", "Kurs başarıyla silindi.", "success");
+                        loadCourses();
+                    },
+                    error: function(err) { handleError(err); }
                 });
             }
         }
@@ -162,9 +238,57 @@
             $.ajax({
                 url: `${API_BASE}/${id}/enroll`,
                 method: "POST",
-                success: function() { alert("Başarıyla kayıt oldunuz!"); loadCourses(); },
-                error: function(err) { alert(err.responseJSON?.message || "Kayıt olunamadı."); }
+                success: function() {
+                    showToast("Başarılı", "Kursa başarıyla kayıt oldunuz!", "success");
+                    loadCourses();
+                },
+                error: function(err) { handleError(err); }
             });
+        }
+
+        // GELİŞMİŞ HATA YAKALAYICI
+        function handleError(err) {
+            let errorMsg = "İşlem sırasında beklenmeyen bir hata oluştu.";
+
+            console.error("API'DEN GELEN HATA RÖNTGENİ:", err);
+
+            if (err.responseJSON) {
+                if (err.responseJSON.errors) {
+                    errorMsg = Object.values(err.responseJSON.errors).flat().join("<br>");
+                } else if (err.responseJSON.detail) {
+                    errorMsg = err.responseJSON.detail;
+                } else if (err.responseJSON.message) {
+                    errorMsg = err.responseJSON.message;
+                } else if (err.responseJSON.title) {
+                    errorMsg = err.responseJSON.title;
+                }
+            } else if (err.status === 403) {
+                errorMsg = "Bu işlemi gerçekleştirmek için yetkiniz yok.";
+            } else if (err.responseText) {
+                errorMsg = "Sunucu Hatası: " + err.statusText;
+            }
+
+            showToast("İşlem Başarısız", errorMsg, "danger");
+        }
+
+        function showToast(title, message, type) {
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-${type} border-0 position-fixed top-0 end-0 m-3" role="alert" aria-live="assertive" aria-atomic="true" style="z-index: 1055;">
+                  <div class="d-flex">
+                    <div class="toast-body">
+                      <strong>${title}</strong><br/> ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                  </div>
+                </div>
+            `;
+
+            $("body").append(toastHtml);
+            const toastEl = $(".toast").last();
+            const toast = new bootstrap.Toast(toastEl[0], { delay: 4000 });
+            toast.show();
+
+            toastEl.on('hidden.bs.toast', function () { $(this).remove(); });
         }
     </script>
 }

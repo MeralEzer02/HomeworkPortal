@@ -20,7 +20,7 @@ namespace HomeworkPortal.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Roles = "Teacher,Admin")] // ADMIN EKLENDİ
         public async Task<IActionResult> CreateAssignment([FromBody] AssignmentCreateDto dto)
         {
             var result = await _assignmentService.CreateAssignmentAsync(dto);
@@ -51,7 +51,7 @@ namespace HomeworkPortal.API.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Roles = "Teacher,Admin")]
         public async Task<IActionResult> UpdateAssignment(int id, [FromBody] AssignmentUpdateDto dto)
         {
             await _assignmentService.UpdateAssignmentAsync(id, dto);

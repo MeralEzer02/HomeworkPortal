@@ -45,7 +45,7 @@ namespace HomeworkPortal.API.Controllers
         }
 
         [HttpPost("{id}/grade")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Roles = "Teacher,Admin")]
         public async Task<IActionResult> GradeSubmission(int id, [FromBody] SubmissionGradeDto dto)
         {
             await _submissionService.GradeSubmissionAsync(id, dto);

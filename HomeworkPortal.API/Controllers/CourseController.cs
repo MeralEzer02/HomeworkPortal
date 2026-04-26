@@ -41,6 +41,16 @@ namespace HomeworkPortal.API.Controllers
             return Ok(result);
         }
 
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Teacher,Admin")]
+        public async Task<IActionResult> UpdateCourse(int id, [FromBody] CourseUpdateDto dto)
+        {
+            if (dto.Id == 0) dto.Id = id;
+
+            await _courseService.UpdateCourseAsync(id, dto);
+            return Ok(new { message = "Kurs başarıyla güncellendi." });
+        }
+
         [HttpPost("{id}/enroll")]
         [Authorize(Roles = "Student")]
         public async Task<IActionResult> EnrollStudent(int id)
