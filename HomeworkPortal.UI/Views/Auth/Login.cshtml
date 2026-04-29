@@ -1,92 +1,126 @@
 ﻿@{
-    Layout = "~/Views/Shared/_AuthLayout.cshtml";
+    Layout = null;
 }
 
-<div class="col-12 col-sm-8 col-md-6 col-lg-5 col-xl-4">
-    <div class="bg-light rounded p-4 p-sm-5 my-4 mx-3 shadow-sm border">
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Giriş Yap - Homework Portal</title>
 
-        <div class="text-center mb-4">
-            <h3 class="text-primary"><i class="fa fa-graduation-cap me-2"></i>HomeworkPortal</h3>
-            <p class="text-muted mt-2">Lütfen bilgilerinizi giriniz</p>
+    <link href="~/Admin/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+    <link href="~/Admin/css/sb-admin-2.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gradient-primary">
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-xl-6 col-lg-8 col-md-9 mt-5">
+                <div class="card o-hidden border-0 shadow-lg my-5">
+                    <div class="card-body p-0">
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="p-5">
+                                    <div class="text-center">
+                                        <i class="fas fa-graduation-cap fa-3x text-primary mb-3"></i>
+                                        <h1 class="h4 text-gray-900 mb-4">Hoş Geldiniz!</h1>
+                                    </div>
+
+                                    <form class="user" id="loginForm">
+                                        <div id="errorAlert" class="alert alert-danger d-none text-center" role="alert"></div>
+
+                                        <div class="form-group">
+                                            <input type="email" class="form-control form-control-user" id="email" placeholder="Email Adresiniz" required>
+                                        </div>
+                                        <div class="form-group position-relative">
+                                            <input type="password" class="form-control form-control-user" id="password" placeholder="Şifreniz" required style="padding-right: 45px;">
+
+                                            <span id="togglePassword" class="position-absolute" style="right: 15px; top: 15px; cursor: pointer; z-index: 10;">
+                                                <i class="fas fa-eye text-gray-500" id="eyeIcon"></i>
+                                            </span>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-user btn-block" id="btnLogin">
+                                            Giriş Yap
+                                        </button>
+                                    </form>
+                                    <hr>
+                                    <div class="text-center">
+                                        <a class="small" href="#">Şifrenizi mi unuttunuz?</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <form id="loginForm" onsubmit="return false;">
-            <div class="form-floating mb-3">
-                <input type="email" class="form-control" id="email" placeholder="name@example.com" required>
-                <label for="email">E-Posta Adresi</label>
-            </div>
-
-            <div class="form-floating mb-4">
-                <input type="password" class="form-control" id="password" placeholder="Password" required>
-                <label for="password">Şifre</label>
-            </div>
-
-            <div class="alert alert-danger py-2" id="errorMessage" style="display:none; font-size:14px;">
-                Hatalı e-posta veya şifre!
-            </div>
-
-            <button type="button" id="btnSubmit" class="btn btn-primary py-3 w-100 mb-4">GİRİŞ YAP</button>
-        </form>
-
     </div>
-</div>
 
-@section Scripts {
+    <script src="~/Admin/vendor/jquery/jquery.min.js"></script>
+    <script src="~/Admin/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/Admin/vendor/jquery-easing/jquery.easing.min.js"></script>
+    <script src="~/Admin/js/sb-admin-2.min.js"></script>
+
     <script>
         $(document).ready(function () {
 
-            $('#password').keypress(function (e) {
-                if (e.which == 13) {
-                    $('#btnSubmit').click();
-                    return false;
-                }
+            const passInput = $("#password");
+            const eyeIcon = $("#eyeIcon");
+
+            $("#togglePassword").on("mousedown touchstart", function (e) {
+                e.preventDefault();
+                passInput.attr("type", "text");
+                eyeIcon.removeClass("fa-eye").addClass("fa-eye-slash");
+            }).on("mouseup mouseleave touchend", function (e) {
+                e.preventDefault();
+                passInput.attr("type", "password");
+                eyeIcon.removeClass("fa-eye-slash").addClass("fa-eye");
             });
 
-            $("#btnSubmit").click(function (e) {
+
+            $("#loginForm").on("submit", function (e) {
                 e.preventDefault();
 
-                var email = $("#email").val();
-                var password = $("#password").val();
-
-                if (!email || !password) {
-                    $("#errorMessage").text("Lütfen e-posta ve şifre giriniz.").show();
-                    return;
-                }
-
-                var model = {
-                    email: email,
-                    password: password
+                const loginData = {
+                    email: $("#email").val(),
+                    password: $("#password").val()
                 };
-
-                $("#btnSubmit").prop("disabled", true).text("Giriş Yapılıyor...");
 
                 $.ajax({
                     url: "https://localhost:7113/api/Auth/login",
-                    type: "POST",
-                    data: JSON.stringify(model),
+                    method: "POST",
                     contentType: "application/json",
+                    data: JSON.stringify(loginData),
+                    beforeSend: function () {
+                        $("#btnLogin").prop("disabled", true).text("Giriş Yapılıyor...");
+                        $("#errorAlert").addClass("d-none");
+                    },
                     success: function (res) {
                         $.ajax({
-                            url: "/Auth/SetSessionToken",
-                            type: "POST",
-                            data: JSON.stringify(res.token),
+                            url: "/Auth/Login",
+                            method: "POST",
                             contentType: "application/json",
-                            success: function() {
-                                window.location = "/Home/Index";
+                            data: JSON.stringify(res.token),
+                            success: function () {
+                                window.location.href = "/Home/Index";
                             }
                         });
                     },
-                    error: function (xhr) {
-                        if(xhr.status === 429){
-                            $("#errorMessage").text("Çok fazla deneme yaptınız. Lütfen bekleyin.");
-                        } else {
-                            $("#errorMessage").text("Hatalı e-posta veya şifre!");
+                    error: function (err) {
+                        let msg = "Giriş başarısız.";
+                        if (err.responseJSON && err.responseJSON.message) {
+                            msg = err.responseJSON.message;
                         }
-                        $("#errorMessage").show();
-                        $("#btnSubmit").prop("disabled", false).text("GİRİŞ YAP");
+                        $("#errorAlert").removeClass("d-none").text(msg);
+                        $("#btnLogin").prop("disabled", false).text("Giriş Yap");
                     }
                 });
             });
         });
     </script>
-}
+</body>
+</html>

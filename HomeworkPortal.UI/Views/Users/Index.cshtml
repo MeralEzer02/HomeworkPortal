@@ -1,0 +1,165 @@
+﻿@{
+    ViewData["Title"] = "Kullanıcı Yönetimi";
+    var role = ViewBag.Role as string;
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-users-cog mr-2 text-primary"></i>Kullanıcı Yönetim Merkezi</h1>
+</div>
+
+@if (role == "Admin")
+{
+    <ul class="nav nav-tabs mb-4 font-weight-bold" id="usersTab" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active text-primary" data-toggle="tab" href="#tab-pane" role="tab" onclick="switchTab('STUDENTS')">
+                <i class="fas fa-user-graduate mr-2"></i>Öğrenci Listesi
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link text-secondary" data-toggle="tab" href="#tab-pane" role="tab" onclick="switchTab('TEACHERS')">
+                <i class="fas fa-chalkboard-teacher mr-2"></i>Öğretmen Listesi
+            </a>
+        </li>
+    </ul>
+
+    <div class="card shadow mb-4 border-left-info">
+        <div class="card-body py-2">
+            <div class="input-group">
+                <div class="input-group-prepend"><span class="input-group-text bg-white border-right-0"><i class="fas fa-search text-primary"></i></span></div>
+                <input type="text" id="userSearch" class="form-control border-left-0" placeholder="Kullanıcı adı veya e-posta ara...">
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle" width="100%">
+                    <thead class="thead-dark" id="userTableHeader">
+                    </thead>
+                    <tbody id="userTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-danger text-center shadow py-5">
+        <i class="fas fa-lock fa-4x mb-3 text-danger"></i>
+        <h4 class="font-weight-bold">Erişim Reddedildi</h4>
+        <p>Bu sayfayı görüntüleme yetkiniz yok. Sadece sistem yöneticileri (Admin) erişebilir.</p>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        const API_USERS = "https://localhost:7113/api/Auth/users";
+        const API_COURSES = "https://localhost:7113/api/Courses";
+
+        let CURRENT_TAB = "STUDENTS";
+        let globalUsers = [];
+        let globalCourses = [];
+
+        $(document).ready(function () {
+            $('.nav-link').on('click', function() {
+                $('.nav-link').removeClass('text-primary').addClass('text-secondary');
+                $(this).removeClass('text-secondary').addClass('text-primary');
+            });
+
+            $("#userSearch").on("keyup", renderUsers);
+
+            if ("@role" === "Admin") {
+                loadAllData();
+            }
+        });
+
+        function switchTab(tabName) {
+            CURRENT_TAB = tabName;
+            $("#userSearch").val('');
+            renderUsers();
+        }
+
+        async function loadAllData() {
+            try {
+                $("#userTableBody").html('<tr><td colspan="4" class="text-center py-4"><i class="fas fa-spinner fa-spin text-primary mr-2"></i>Veriler Çekiliyor...</td></tr>');
+
+                // Kullanıcıları ve Kursları aynı anda çekiyoruz
+                const [userRes, courseRes] = await Promise.all([
+                    $.ajax({ url: API_USERS, method: "GET" }).catch(()=>({data:[]})),
+                    $.ajax({ url: API_COURSES, method: "GET" }).catch(()=>({data:[]}))
+                ]);
+
+                globalUsers = userRes.data || userRes || [];
+                globalCourses = courseRes.data || courseRes || [];
+
+                renderUsers();
+            } catch(err) {
+                $("#userTableBody").html('<tr><td colspan="4" class="text-center text-danger py-4">Kullanıcılar yüklenemedi.</td></tr>');
+            }
+        }
+
+        function renderUsers() {
+            let targetRole = CURRENT_TAB === "STUDENTS" ? "Student" : "Teacher";
+            let filtered = globalUsers.filter(u => u.role === targetRole);
+
+            const searchText = $("#userSearch").val().toLowerCase();
+            if (searchText) {
+                filtered = filtered.filter(u => (u.fullName && u.fullName.toLowerCase().includes(searchText)) || (u.email && u.email.toLowerCase().includes(searchText)));
+            }
+
+            // Tablo Başlıklarını Tab'a Göre Değiştir
+            if (CURRENT_TAB === "STUDENTS") {
+                $("#userTableHeader").html('<tr><th>Öğrenci Adı</th><th>E-Posta Adresi</th><th>Kayıtlı Olduğu Kurslar</th><th>Sistem İşlemi</th></tr>');
+            } else {
+                $("#userTableHeader").html('<tr><th>Öğretmen Adı</th><th>E-Posta Adresi</th><th>Açtığı Kurslar</th><th>Sistem İşlemi</th></tr>');
+            }
+
+            let html = "";
+            if (filtered.length === 0) {
+                html = `<tr><td colspan="4" class="text-center text-muted py-4">Bu rolde kullanıcı bulunamadı.</td></tr>`;
+            } else {
+                filtered.forEach(u => {
+                    let extraColumn = "";
+
+                    // ÖĞRETMENSE: Açtığı Kursları Bul
+                    if (CURRENT_TAB === "TEACHERS") {
+                        let teacherCourses = globalCourses.filter(c => c.teacherId === u.id);
+                        if (teacherCourses.length > 0) {
+                            let badges = teacherCourses.map(c => `<span class="badge badge-info mr-1 mb-1 p-2">${c.name}</span>`).join('');
+                            extraColumn = `<td>${badges}</td>`;
+                        } else {
+                            extraColumn = `<td><span class="badge badge-secondary p-2">Henüz kurs açmamış</span></td>`;
+                        }
+                    }
+                    // ÖĞRENCİYSE: Kayıtlı Olduğu Kursları Bul
+                    else if (CURRENT_TAB === "STUDENTS") {
+                        // API'den "u.courses" veya benzeri bir liste dönüyorsa onu kullanırız, dönmüyorsa globalCourses içindeki öğrenci listesinden bakarız.
+                        if (u.courses && u.courses.length > 0) {
+                            let badges = u.courses.map(c => `<span class="badge badge-primary mr-1 mb-1 p-2">${c.name || c}</span>`).join('');
+                            extraColumn = `<td>${badges}</td>`;
+                        } else {
+                            let studentCourses = globalCourses.filter(c => c.studentIds && c.studentIds.includes(u.id));
+                            if (studentCourses.length > 0) {
+                                let badges = studentCourses.map(c => `<span class="badge badge-primary mr-1 mb-1 p-2">${c.name}</span>`).join('');
+                                extraColumn = `<td>${badges}</td>`;
+                            } else {
+                                extraColumn = `<td><span class="badge badge-secondary p-2">Kayıtlı kursu yok</span></td>`;
+                            }
+                        }
+                    }
+
+                    html += `
+                        <tr>
+                            <td><strong class="text-dark"><i class="fas fa-user-circle text-gray-500 mr-2"></i>${u.fullName || 'İsimsiz'}</strong></td>
+                            <td>${u.email}</td>
+                            ${extraColumn}
+                            <td><button class="btn btn-sm btn-outline-danger" disabled><i class="fas fa-ban mr-1"></i>Engelle</button></td>
+                        </tr>`;
+                });
+            }
+            $("#userTableBody").html(html);
+        }
+    </script>
+}

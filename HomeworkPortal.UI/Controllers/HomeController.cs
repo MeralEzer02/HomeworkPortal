@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace HomeworkPortal.UI.Controllers
 {
-    public class HomeController : Controller
+    public class HomeController : BaseController
     {
         private readonly ILogger<HomeController> _logger;
 
@@ -15,17 +15,6 @@ namespace HomeworkPortal.UI.Controllers
 
         public IActionResult Index()
         {
-            var token = HttpContext.Session.GetString("Token");
-
-            if (string.IsNullOrEmpty(token))
-            {
-                return RedirectToAction("Login", "Auth");
-            }
-
-            Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
-            Response.Headers.Append("Pragma", "no-cache");
-            Response.Headers.Append("Expires", "0");
-
             return View();
         }
 

@@ -7,25 +7,26 @@ namespace HomeworkPortal.UI.Controllers
         [HttpGet]
         public IActionResult Login()
         {
+            if (!string.IsNullOrEmpty(HttpContext.Session.GetString("Token")))
+            {
+                return RedirectToAction("Index", "Home");
+            }
             return View();
         }
 
         [HttpPost]
-        public IActionResult SetSessionToken([FromBody] string token)
+        public IActionResult Login([FromBody] string token)
         {
-            if (!string.IsNullOrEmpty(token))
-            {
-                HttpContext.Session.SetString("Token", token);
-                return Ok();
-            }
-            return BadRequest();
+            if (string.IsNullOrEmpty(token)) return BadRequest("Token boş olamaz");
+
+            HttpContext.Session.SetString("Token", token);
+            return Ok();
         }
 
         public IActionResult Logout()
         {
-            HttpContext.Session.Clear();
-
-            return RedirectToAction("Login", "Auth");
+            HttpContext.Session.Remove("Token");
+            return RedirectToAction("Login");
         }
     }
 }

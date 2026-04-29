@@ -1,0 +1,517 @@
+﻿@{
+    ViewData["Title"] = "Teslim Yönetimi";
+    var role = ViewBag.Role as string;
+    var assignmentId = ViewBag.AssignmentId;
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">
+        <i class="fas fa-file-upload mr-2 text-primary"></i>
+        @if (role == "Student")
+        {
+            <text>Teslim Ettiğim Ödevler</text>
+        }
+        else
+        {
+            <text>Teslim ve Notlandırma Merkezi</text>
+        }
+    </h1>
+</div>
+
+@if (role == "Student")
+{
+    <div class="card shadow mb-4 border-left-primary">
+        <div class="card-body py-3">
+            <div class="row align-items-end">
+                <div class="col-md-5">
+                    <label class="small font-weight-bold text-primary"><i class="fas fa-search mr-1"></i>Arama</label>
+                    <input type="text" id="studentSearch" class="form-control" placeholder="Ödev adında ara...">
+                </div>
+                <div class="col-md-4">
+                    <label class="small font-weight-bold text-primary"><i class="fas fa-filter mr-1"></i>Durum Filtresi</label>
+                    <select id="statusFilter" class="form-control">
+                        <option value="ALL">Tümü</option>
+                        <option value="GRADED">Not Verilenler</option>
+                        <option value="WAITING">Not Bekleyenler</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary w-100" data-toggle="modal" data-target="#uploadModal">
+                        <i class="fas fa-cloud-upload-alt mr-2"></i>Yeni Ödev Yükle
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle" width="100%" cellspacing="0">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>İlgili Kurs</th>
+                            <th>Ödev Başlığı</th>
+                            <th>Teslim Tarihi</th>
+                            <th>Yüklenen Dosya</th>
+                            <th>Durum / Not</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentSubTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    @* Öğrenci Dosya Yükleme Modalı *@
+    <div class="modal fade" id="uploadModal" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Ödev Dosyası Yükle</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="uploadForm">
+                        <div class="form-group">
+                            <label class="font-weight-bold">Hangi Ödevi Yüklüyorsunuz?</label>
+                            <select id="selectAssignment" class="form-control" required>
+                                <option value="">Lütfen Bekleyen Ödevinizi Seçin...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="font-weight-bold">Dosya Seçin (PDF, ZIP, DOCX)</label>
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="studentFile" required>
+                                <label class="custom-file-label" for="studentFile" id="fileLabel">Dosya Seç...</label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block font-weight-bold" id="btnUpload">Gönder</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (role == "Teacher" || role == "Admin")
+{
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card shadow mb-4 border-left-info">
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-filter mr-2"></i>Seçim Paneli</h6>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="font-weight-bold text-info">1. Kursu Seçin</label>
+                        <select id="teacherCourseSelect" class="form-control border-info">
+                            <option value="">Lütfen Kurs Seçin...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="font-weight-bold text-success">2. Ödevi Seçin</label>
+                        <select id="teacherAssignmentSelect" class="form-control border-success" disabled>
+                            <option value="">Önce Kurs Seçmelisiniz...</option>
+                        </select>
+                    </div>
+                    <button id="btnFetchSubmissions" class="btn btn-primary btn-block font-weight-bold" disabled>
+                        <i class="fas fa-search mr-2"></i>Teslimleri Getir
+                    </button>
+                </div>
+            </div>
+
+            <div class="card shadow mb-4 d-none" id="chartCard">
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 font-weight-bold text-success"><i class="fas fa-chart-pie mr-2"></i>Not Dağılımı</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="gradePieChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Öğrenci Teslimleri</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle" width="100%">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Öğrenci Adı</th>
+                                    <th>Teslim Tarihi</th>
+                                    <th>Dosya</th>
+                                    <th>Not</th>
+                                    <th>İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teacherSubTableBody">
+                                <tr><td colspan="5" class="text-center text-muted py-5"><i class="fas fa-arrow-left fa-2x mb-3"></i><br>Lütfen soldaki panelden kurs ve ödev seçin.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Not Verme Modalı *@
+    <div class="modal fade" id="gradingModal" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-sm" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Öğrenciye Not Ver</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="gradingForm">
+                        <input type="hidden" id="gradeSubmissionId">
+                        <div class="form-group text-center">
+                            <label class="font-weight-bold">Puan (0 - 100)</label>
+                            <input type="number" id="gradeValue" class="form-control text-center form-control-lg" min="0" max="100" required>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-block font-weight-bold" id="btnSaveGrade">Kaydet</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        const API_SUB = "https://localhost:7113/api/Submissions";
+        const API_COURSE = "https://localhost:7113/api/Courses";
+        const API_ASSIGN = "https://localhost:7113/api/Assignments";
+        const USER_ROLE = "@role";
+        const URL_ASSIGN_ID = "@assignmentId" !== "" ? parseInt("@assignmentId") : null;
+
+        let globalStudentSubs = [];
+        let globalCoursesMap = {};
+        let globalAssignmentsMap = {};
+        let pieChartInstance = null;
+
+        $(document).ready(function () {
+
+            $('#studentFile').on('change', function() {
+                let fileName = $(this).val().split('\\').pop();
+                $(this).next('.custom-file-label').addClass("selected").html(fileName);
+            });
+
+            // ================= ÖĞRENCİ MANTIĞI =================
+            if (USER_ROLE === "Student") {
+                loadAllStudentData();
+
+                $("#studentSearch, #statusFilter").on("change keyup", renderStudentSubmissions);
+
+                $("#uploadForm").on("submit", function (e) {
+                    e.preventDefault();
+                    const file = $("#studentFile")[0].files[0];
+                    const assignId = $("#selectAssignment").val();
+
+                    let formData = new FormData();
+                    formData.append("assignmentId", assignId);
+                    formData.append("file", file);
+
+                    $.ajax({
+                        url: API_SUB,
+                        method: "POST",
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        beforeSend: function () { $("#btnUpload").prop("disabled", true).text("Yükleniyor..."); },
+                        success: function () {
+                            $("#uploadModal").modal("hide");
+                            showToast("Başarılı", "Ödev başarıyla yüklendi!", "success");
+                            $("#uploadForm")[0].reset();
+                            $('#fileLabel').html("Dosya Seç...");
+                            loadAllStudentData();
+                        },
+                        error: function (err) { handleError(err); },
+                        complete: function () { $("#btnUpload").prop("disabled", false).text("Gönder"); }
+                    });
+                });
+            }
+            // ================= ÖĞRETMEN / ADMIN MANTIĞI =================
+            else {
+                loadTeacherCourses();
+
+                $("#teacherCourseSelect").on("change", function() {
+                    const courseId = $(this).val();
+                    if(courseId) {
+                        loadTeacherAssignments(courseId);
+                    } else {
+                        $("#teacherAssignmentSelect").empty().append('<option value="">Önce Kurs Seçmelisiniz...</option>').prop("disabled", true);
+                        $("#btnFetchSubmissions").prop("disabled", true);
+                    }
+                });
+
+                $("#teacherAssignmentSelect").on("change", function() {
+                    $("#btnFetchSubmissions").prop("disabled", !$(this).val());
+                });
+
+                $("#btnFetchSubmissions").on("click", function() {
+                    const assignId = $("#teacherAssignmentSelect").val();
+                    loadTeacherSubmissions(assignId);
+                });
+
+                $("#gradingForm").on("submit", function (e) {
+                    e.preventDefault();
+                    const subId = $("#gradeSubmissionId").val();
+                    const grade = $("#gradeValue").val();
+
+                    $.ajax({
+                        url: `${API_SUB}/${subId}`,
+                        method: "PUT",
+                        contentType: "application/json",
+                        data: JSON.stringify({ id: parseInt(subId), grade: parseInt(grade) }),
+                        beforeSend: function () { $("#btnSaveGrade").prop("disabled", true).text("Kaydediliyor..."); },
+                        success: function () {
+                            $("#gradingModal").modal("hide");
+                            showToast("Başarılı", "Not başarıyla kaydedildi.", "success");
+                            $("#btnFetchSubmissions").click();
+                        },
+                        error: function (err) { handleError(err); },
+                        complete: function () { $("#btnSaveGrade").prop("disabled", false).text("Kaydet"); }
+                    });
+                });
+            }
+        });
+
+        async function loadAllStudentData() {
+            try {
+                $("#studentSubTableBody").html('<tr><td colspan="5" class="text-center py-4"><i class="fas fa-spinner fa-spin text-primary mr-2"></i>Veriler toplanıyor...</td></tr>');
+
+                const [subRes, assignRes, courseRes] = await Promise.all([
+                    $.ajax({ url: `${API_SUB}/student`, method: "GET" }).catch(() => ({ data: [] })),
+                    $.ajax({ url: `${API_ASSIGN}/student`, method: "GET" }).catch(() => ({ data: [] })),
+                    $.ajax({ url: API_COURSE, method: "GET" }).catch(() => ({ data: [] }))
+                ]);
+
+                globalStudentSubs = subRes.data || subRes || [];
+                const assignments = assignRes.data || assignRes || [];
+                const courses = courseRes.data || courseRes || [];
+
+                globalCoursesMap = {};
+                courses.forEach(c => globalCoursesMap[c.id] = c.name);
+
+                globalAssignmentsMap = {};
+                assignments.forEach(a => globalAssignmentsMap[a.id] = { title: a.title, courseId: a.courseId, dueDate: a.dueDate });
+
+                let select = $("#selectAssignment").empty().append('<option value="">Lütfen Bekleyen Ödevinizi Seçin...</option>');
+                let submittedIds = globalStudentSubs.map(s => s.assignmentId);
+
+                assignments.forEach(a => {
+                    const isExpired = new Date(a.dueDate) < new Date();
+                    const isSubmitted = submittedIds.includes(a.id);
+
+                    if (!isExpired && !isSubmitted) {
+                        select.append(`<option value="${a.id}">${a.title} (Son: ${new Date(a.dueDate).toLocaleDateString('tr-TR')})</option>`);
+                    }
+                });
+
+                renderStudentSubmissions();
+
+                if (URL_ASSIGN_ID) {
+                    if (submittedIds.includes(URL_ASSIGN_ID)) {
+                        showToast("Bilgi", "Bu ödevi zaten teslim ettiniz.", "info");
+                    } else {
+                        const targetAssign = assignments.find(a => a.id === URL_ASSIGN_ID);
+                        if (targetAssign) {
+                            if (new Date(targetAssign.dueDate) < new Date()) {
+                                showToast("Süre Doldu", "Bu ödevin teslim süresi geçmiş.", "warning");
+                            } else {
+                                setTimeout(() => {
+                                    $("#selectAssignment").val(URL_ASSIGN_ID.toString());
+                                    $("#uploadModal").modal("show");
+                                }, 300);
+                            }
+                        }
+                    }
+                }
+
+            } catch (err) {
+                handleError(err);
+            }
+        }
+
+        function renderStudentSubmissions() {
+            let filtered = [...globalStudentSubs];
+            const text = $("#studentSearch").val().toLowerCase();
+            const status = $("#statusFilter").val();
+
+            let html = "";
+
+            let tableData = filtered.map(item => {
+                const assignInfo = globalAssignmentsMap[item.assignmentId] || { title: "Bilinmeyen Ödev", courseId: 0 };
+                return {
+                    ...item,
+                    title: assignInfo.title,
+                    courseName: globalCoursesMap[assignInfo.courseId] || "Bilinmeyen Kurs"
+                };
+            });
+
+            if (text) tableData = tableData.filter(s => s.title.toLowerCase().includes(text));
+            if (status === "GRADED") tableData = tableData.filter(s => s.grade !== null);
+            if (status === "WAITING") tableData = tableData.filter(s => s.grade === null);
+
+            if (tableData.length === 0) {
+                html = '<tr><td colspan="5" class="text-center py-4">Gösterilecek teslim bulunamadı.</td></tr>';
+            } else {
+                tableData.forEach(item => {
+                    const date = new Date(item.submissionDate).toLocaleString('tr-TR');
+                    const gradeBadge = item.grade !== null
+                        ? `<span class="badge badge-success p-2">Notunuz: ${item.grade}</span>`
+                        : `<span class="badge badge-warning text-dark p-2">Değerlendiriliyor</span>`;
+
+                    html += `
+                        <tr>
+                            <td><span class="badge badge-primary p-2">${item.courseName}</span></td>
+                            <td><strong>${item.title}</strong></td>
+                            <td>${date}</td>
+                            <td><a href="${item.filePath}" target="_blank" class="btn btn-sm btn-outline-info"><i class="fas fa-download mr-1"></i>İndir</a></td>
+                            <td>${gradeBadge}</td>
+                        </tr>`;
+                });
+            }
+            $("#studentSubTableBody").html(html);
+        }
+
+        // --- ÖĞRETMEN FONKSİYONLARI ---
+        function loadTeacherCourses() {
+            $.ajax({
+                url: API_COURSE,
+                method: "GET",
+                success: function (res) {
+                    const list = res.data || res;
+                    let select = $("#teacherCourseSelect");
+                    list.forEach(c => select.append(`<option value="${c.id}">${c.name}</option>`));
+                }
+            });
+        }
+
+        function loadTeacherAssignments(courseId) {
+            $.ajax({
+                url: `${API_ASSIGN}/course/${courseId}`,
+                method: "GET",
+                beforeSend: function() { $("#teacherAssignmentSelect").html('<option>Yükleniyor...</option>'); },
+                success: function (res) {
+                    const list = res.data || res;
+                    let select = $("#teacherAssignmentSelect").empty().append('<option value="">Şimdi Bir Ödev Seçin...</option>');
+                    if(list.length > 0) {
+                        list.forEach(a => select.append(`<option value="${a.id}">${a.title}</option>`));
+                        select.prop("disabled", false);
+                    } else {
+                        select.empty().append('<option value="">Bu kursta ödev yok.</option>').prop("disabled", true);
+                        $("#btnFetchSubmissions").prop("disabled", true);
+                    }
+                }
+            });
+        }
+
+        function loadTeacherSubmissions(assignId) {
+            $.ajax({
+                url: `${API_SUB}/assignment/${assignId}`,
+                method: "GET",
+                beforeSend: function () { $("#teacherSubTableBody").html('<tr><td colspan="5" class="text-center py-4"><i class="fas fa-spinner fa-spin text-primary mr-2"></i>Veriler Çekiliyor...</td></tr>'); },
+                success: function (res) {
+                    const list = res.data || res;
+                    let html = "";
+
+                    if (!list || list.length === 0) {
+                        $("#teacherSubTableBody").html('<tr><td colspan="5" class="text-center text-muted py-4">Bu ödev için henüz teslim yapılmamış.</td></tr>');
+                        $("#chartCard").addClass("d-none");
+                        return;
+                    }
+
+                    let gradedCount = 0;
+                    let waitingCount = 0;
+
+                    list.forEach(item => {
+                        if(item.grade !== null) gradedCount++; else waitingCount++;
+
+                        const date = new Date(item.submissionDate).toLocaleString('tr-TR');
+                        const gradeBadge = item.grade !== null
+                            ? `<span class="badge badge-success p-2 font-weight-bold">${item.grade}</span>`
+                            : `<span class="badge badge-secondary p-2">Not Girilmedi</span>`;
+
+                        html += `
+                            <tr>
+                                <td><strong class="text-dark">${item.studentFullName || 'Öğrenci Adı'}</strong></td>
+                                <td>${date}</td>
+                                <td><a href="${item.filePath}" target="_blank" class="btn btn-sm btn-info text-white"><i class="fas fa-download mr-1"></i>İndir</a></td>
+                                <td>${gradeBadge}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning text-dark font-weight-bold" onclick="openGradeModal(${item.id}, ${item.grade || ''})">
+                                        <i class="fas fa-star mr-1"></i>Not Ver
+                                    </button>
+                                </td>
+                            </tr>`;
+                    });
+                    $("#teacherSubTableBody").html(html);
+                    drawPieChart(gradedCount, waitingCount);
+                },
+                error: function (err) { handleError(err); }
+            });
+        }
+
+        function openGradeModal(subId, currentGrade) {
+            $("#gradeSubmissionId").val(subId);
+            $("#gradeValue").val(currentGrade !== null ? currentGrade : "");
+            $("#gradingModal").modal("show");
+        }
+
+        function drawPieChart(graded, waiting) {
+            $("#chartCard").removeClass("d-none");
+            const ctx = document.getElementById('gradePieChart').getContext('2d');
+            if (pieChartInstance) { pieChartInstance.destroy(); }
+
+            pieChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Not Verilenler', 'Bekleyenler'],
+                    datasets: [{
+                        data: [graded, waiting],
+                        backgroundColor: ['#1cc88a', '#f6c23e'],
+                        hoverBackgroundColor: ['#17a673', '#dda20a'],
+                        hoverBorderColor: "rgba(234, 236, 244, 1)",
+                    }],
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    tooltips: { backgroundColor: "rgb(255,255,255)", bodyFontColor: "#858796", borderColor: '#dddfeb', borderWidth: 1, xPadding: 15, yPadding: 15, displayColors: false, caretPadding: 10 },
+                    legend: { display: true, position: 'bottom' },
+                    cutoutPercentage: 70,
+                },
+            });
+        }
+
+        function handleError(err) {
+            let errorMsg = "İşlem sırasında beklenmeyen bir hata oluştu.";
+            if (err.responseJSON) {
+                if (err.responseJSON.errors) errorMsg = Object.values(err.responseJSON.errors).flat().join("<br>");
+                else if (err.responseJSON.detail) errorMsg = err.responseJSON.detail;
+                else if (err.responseJSON.message) errorMsg = err.responseJSON.message;
+            }
+            showToast("İşlem Başarısız", errorMsg, "danger");
+        }
+
+        function showToast(title, message, type) {
+            let swalIcon = type === 'danger' ? 'error' : type;
+            let bgColor = type === 'danger' ? '#e74a3b' : (type === 'success' ? '#1cc88a' : '#f6c23e');
+            let txtColor = type === 'warning' ? '#3a3b45' : '#ffffff';
+            Swal.mixin({ toast: true, position: 'bottom-end', showConfirmButton: false, timer: 4000, timerProgressBar: true, background: bgColor, color: txtColor, iconColor: txtColor }).fire({ icon: swalIcon, title: title, text: message });
+        }
+    </script>
+}

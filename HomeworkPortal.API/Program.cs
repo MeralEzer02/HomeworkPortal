@@ -24,6 +24,15 @@ builder.Host.UseSerilog((context, loggerConfig) =>
 
 builder.Services.AddControllers();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowUI", builder =>
+        builder.WithOrigins("https://localhost:7205")
+               .AllowAnyMethod()
+               .AllowAnyHeader()
+               .AllowCredentials());
+});
+
 // SQL Server ve DbContext Ayarı
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -191,6 +200,8 @@ app.UseMiddleware<HomeworkPortal.API.Middlewares.SecurityHeadersMiddleware>();
 //  CORS MİDDLEWARE
 app.UseRouting();
 
+app.UseCors("AllowUI");
+
 app.UseCors("AllowMyUI");
 
 app.UseAuthentication();
@@ -203,13 +214,5 @@ app.UseHttpMetrics();
 app.MapControllers().RequireRateLimiting("api");
 
 app.MapMetrics();
-
-//using (var scope = app.Services.CreateScope())
-//{
-    //var userManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<HomeworkPortal.API.Models.AppUser>>();
-    //var roleManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.RoleManager<HomeworkPortal.API.Models.AppRole>>();
-
-    //await HomeworkPortal.API.Data.DbSeeder.SeedDataAsync(userManager, roleManager);
-//}
 
 app.Run();
