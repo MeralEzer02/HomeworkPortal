@@ -2,7 +2,7 @@
 
 namespace HomeworkPortal.UI.Controllers
 {
-    public class AuthController : Controller
+    public class AuthController : BaseController
     {
         [HttpGet]
         public IActionResult Login()
@@ -27,6 +27,17 @@ namespace HomeworkPortal.UI.Controllers
         {
             HttpContext.Session.Remove("Token");
             return RedirectToAction("Login");
+        }
+
+        [HttpGet]
+        public IActionResult Register()
+        {
+            var token = Request.Cookies["jwt_token"];
+            if (!string.IsNullOrEmpty(token))
+            {
+                return RedirectToAction("Index", "Home");
+            }
+            return View();
         }
     }
 }

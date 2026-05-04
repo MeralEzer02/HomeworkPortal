@@ -24,6 +24,8 @@ builder.Host.UseSerilog((context, loggerConfig) =>
 // Add services to the container.
 builder.Services.AddControllers();
 
+builder.Services.AddScoped<HomeworkPortal.API.Services.IActionLogService, HomeworkPortal.API.Services.ActionLogService>();
+
 // CORS AYARI
 builder.Services.AddCors(options =>
 {
@@ -111,6 +113,10 @@ builder.Services.AddScoped<IFileService, FileService>();
 
 builder.Services.AddEndpointsApiExplorer();
 
+// Arka plan görev kuyruğu ve işçisi
+builder.Services.AddSingleton<HomeworkPortal.API.Services.IProgressUpdateQueue, HomeworkPortal.API.Services.ProgressUpdateQueue>();
+builder.Services.AddHostedService<HomeworkPortal.API.Services.ProgressBackgroundWorker>();
+
 // Health Check Servisleri
 builder.Services.AddHealthChecks()
     .AddSqlServer(
@@ -125,7 +131,7 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddFixedWindowLimiter("api", opt =>
     {
-        opt.PermitLimit = 100;
+        opt.PermitLimit = 200;
         opt.Window = TimeSpan.FromMinutes(1);
         opt.QueueLimit = 0;
     });

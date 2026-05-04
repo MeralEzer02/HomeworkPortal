@@ -6,6 +6,7 @@ using HomeworkPortal.API.Models;
 using HomeworkPortal.API.Repositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using HomeworkPortal.API.Services;
 
 namespace HomeworkPortal.API.Services
 {
@@ -19,7 +20,19 @@ namespace HomeworkPortal.API.Services
         private readonly IFileService _fileService;
         private readonly ILogger<SubmissionService> _logger;
 
-        public SubmissionService(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUserService currentUserService, UserManager<AppUser> userManager, INotificationService notificationService, IFileService fileService, ILogger<SubmissionService> logger)
+        private readonly IActionLogService _actionLogService;
+        private readonly IProgressUpdateQueue _progressQueue;
+
+        public SubmissionService(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            ICurrentUserService currentUserService,
+            UserManager<AppUser> userManager,
+            INotificationService notificationService,
+            IFileService fileService,
+            ILogger<SubmissionService> logger,
+            IActionLogService actionLogService,
+            IProgressUpdateQueue progressQueue)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -28,6 +41,8 @@ namespace HomeworkPortal.API.Services
             _notificationService = notificationService;
             _fileService = fileService;
             _logger = logger;
+            _actionLogService = actionLogService;
+            _progressQueue = progressQueue;
         }
 
         public async Task<SubmissionReadDto> SubmitAssignmentAsync(SubmissionCreateDto dto)
@@ -72,11 +87,25 @@ namespace HomeworkPortal.API.Services
                 }
 
                 _logger.LogWarning("⚠️ DİKKAT: Öğrenci {StudentId}, Ödev {AssignmentId} için mükerrer gönderim yapmaya çalıştı!", studentId, dto.AssignmentId);
-
                 throw new Exception("Bu ödev için zaten bir teslimat yaptınız. (Çoklu gönderim engellendi.)", ex);
             }
 
             _logger.LogInformation("✅ BAŞARILI: Öğrenci {StudentId}, Ödev {AssignmentId} için dosya yükledi.", studentId, dto.AssignmentId);
+
+            await _actionLogService.LogActionAsync(
+                studentId,
+                "SUBMISSION_CREATED",
+                $"'{assignment.Title}' isimli ödev için yeni bir teslim dosyası yüklendi.",
+                "Submissions",
+                submission.Id
+            );
+
+            await _progressQueue.QueueWorkItemAsync(new ProgressMessage
+            {
+                CourseId = assignment.CourseId,
+                ActionType = "SUBMITTED",
+                StudentId = studentId
+            });
 
             return _mapper.Map<SubmissionReadDto>(submission);
         }
@@ -126,6 +155,21 @@ namespace HomeworkPortal.API.Services
             {
                 _logger.LogError(ex, "❌ HATA YUTULDU: Not verildi ama {StudentId} ID'li öğrenciye bildirim atılamadı!", submission.StudentId);
             }
+
+            await _actionLogService.LogActionAsync(
+                _currentUserService.UserId,
+                "SUBMISSION_GRADED",
+                $"Bir öğrenci teslimi notlandırıldı. Verilen Not: {dto.Grade}",
+                "Submissions",
+                submission.Id
+            );
+
+            await _progressQueue.QueueWorkItemAsync(new ProgressMessage
+            {
+                CourseId = submission.Assignment.CourseId,
+                ActionType = "GRADED",
+                StudentId = submission.StudentId
+            });
         }
 
         public async Task<PagedResult<SubmissionReadDto>> GetSubmissionsByAssignmentAsync(int assignmentId, PaginationParams paginationParams)

@@ -156,10 +156,6 @@ else
 }
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/tr.min.js"></script>
-
     <script>
         const USER_ROLE = "@role";
         const API_BASE = "https://localhost:7113/api";
@@ -171,6 +167,8 @@ else
                 loadDashboardData("admin");
             } else if (USER_ROLE === "Teacher") {
                 loadDashboardData("teacher");
+            } else if (USER_ROLE === "Student") {
+                loadDashboardData("student");
             }
         });
 
@@ -187,7 +185,7 @@ else
                         $("#statTotalTeachersOrCourses").text(res.totalTeachers);
                         $("#statTotalCoursesOrAssignments").text(res.totalCourses);
                         $("#statTotalAssignmentsOrPending").text(res.totalAssignments);
-                    } else {
+                    } else if (rolePath === "teacher") {
                         $("#statTotalStudents").text(res.myTotalStudents);
                         $("#statTotalTeachersOrCourses").text(res.myTotalCourses);
                         $("#statTotalCoursesOrAssignments").text(res.myTotalAssignments);
@@ -197,22 +195,27 @@ else
                     const now = moment();
                     const fiveDaysLater = moment().add(5, 'days');
 
-                    let activeList = (res.activeAssignments || [])
-                        .filter(a => moment(a.dueDate).isBetween(now, fiveDaysLater, null, '[]'))
-                        .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
-                        .slice(0, 3);
-                    renderAssignmentList(activeList, "#activeAssignmentsList", "Yaklaşan (5 gün içinde) aktif ödev bulunmuyor.", "success");
+                    // Sadece Admin ve Öğretmen için tabloları doldur
+                    if (rolePath !== "student") {
+                        let activeList = (res.activeAssignments || [])
+                            .filter(a => moment(a.dueDate).isBetween(now, fiveDaysLater, null, '[]'))
+                            .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+                            .slice(0, 3);
+                        renderAssignmentList(activeList, "#activeAssignmentsList", "Yaklaşan (5 gün içinde) aktif ödev bulunmuyor.", "success");
 
-                    let expiredList = (res.expiredAssignments || [])
-                        .filter(a => moment(a.dueDate).isBefore(now))
-                        .sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate))
-                        .slice(0, 3);
-                    renderAssignmentList(expiredList, "#expiredAssignmentsList", "Süresi dolmuş ödev yok.", "danger");
+                        let expiredList = (res.expiredAssignments || [])
+                            .filter(a => moment(a.dueDate).isBefore(now))
+                            .sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate))
+                            .slice(0, 3);
+                        renderAssignmentList(expiredList, "#expiredAssignmentsList", "Süresi dolmuş ödev yok.", "danger");
 
-                    let coursesList = (res.recentCourses || [])
-                        .sort((a, b) => b.id - a.id)
-                        .slice(0, 5);
-                    renderCoursesTable(coursesList, rolePath === "teacher");
+                        let coursesList = (res.recentCourses || [])
+                            .sort((a, b) => b.id - a.id)
+                            .slice(0, 5);
+                        renderCoursesTable(coursesList, rolePath === "teacher");
+                    }
+
+                    checkOnboarding(USER_ROLE, res);
                 },
                 error: function (xhr) {
                     $(".stat-widget").text("Hata!");
@@ -271,6 +274,46 @@ else
                 `;
             });
             $("#dashboardCoursesTable").html(html);
+        }
+
+        function checkOnboarding(role, data) {
+            // ÖĞRETMEN YÖNLENDİRMESİ
+            if (role === "Teacher" && data.myTotalCourses === 0) {
+                Swal.fire({
+                    title: 'Eğitmen Paneline Hoş Geldiniz! 🎓',
+                    text: 'Sistemde henüz hiç kurs oluşturmamışsınız. Öğrencilerinize ulaşmak ve ödevler vermek için ilk adımınızı atın.',
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonColor: '#4e73df',
+                    cancelButtonColor: '#858796',
+                    confirmButtonText: '<i class="fas fa-plus"></i> Hemen Kurs Oluştur',
+                    cancelButtonText: 'Daha Sonra',
+                    allowOutsideClick: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = "/Courses";
+                    }
+                });
+            }
+
+            // ÖĞRENCİ YÖNLENDİRMESİ
+            else if (role === "Student" && data.myEnrolledCoursesCount === 0) {
+                Swal.fire({
+                    title: 'Eğitim Yolculuğunuz Başlıyor! 🚀',
+                    text: 'Aramıza hoş geldin! Görünen o ki henüz hiçbir kursa kayıtlı değilsin. Hadi hemen kursları keşfet ve öğrenmeye başla.',
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonColor: '#1cc88a',
+                    cancelButtonColor: '#858796',
+                    confirmButtonText: '<i class="fas fa-search"></i> Kursları Keşfet',
+                    cancelButtonText: 'Paneli İncele',
+                    allowOutsideClick: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = "/Courses";
+                    }
+                });
+            }
         }
     </script>
 }

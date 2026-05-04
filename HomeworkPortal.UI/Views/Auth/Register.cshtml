@@ -1,0 +1,174 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Kayıt Ol - Homework Portal</title>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #4e73df;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .register-card {
+            background: white;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 450px;
+            padding: 2.5rem 2rem;
+        }
+
+        .form-control {
+            border-radius: 20px;
+            padding: 1.2rem 1rem;
+            background-color: #f8f9fc;
+            border: 1px solid #d1d3e2;
+        }
+
+            .form-control:focus {
+                box-shadow: none;
+                border-color: #4e73df;
+            }
+
+        select.form-control {
+            height: 50px !important; 
+            padding: 0.5rem 1rem;
+        }
+
+        .btn-primary {
+            background-color: #4e73df;
+            border: none;
+            border-radius: 20px;
+            padding: 0.8rem;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+            .btn-primary:hover {
+                background-color: #2e59d9;
+            }
+
+        .icon-header {
+            font-size: 3.5rem;
+            color: #4e73df;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="register-card text-center">
+        <i class="fas fa-user-graduate icon-header mb-3"></i>
+        <h4 class="mb-4 text-gray-900">Aramıza Katılın!</h4>
+
+        <form id="registerForm">
+            <!-- Ad ve Soyad (Yan yana) -->
+            <div class="form-row">
+                <div class="col mb-3">
+                    <input type="text" id="regFirstName" class="form-control" placeholder="Adınız" required>
+                </div>
+                <div class="col mb-3">
+                    <input type="text" id="regLastName" class="form-control" placeholder="Soyadınız" required>
+                </div>
+            </div>
+
+            <!-- E-posta -->
+            <div class="form-group mb-3">
+                <input type="email" id="regEmail" class="form-control" placeholder="E-posta Adresiniz" required>
+            </div>
+
+            <!-- Şifre -->
+            <div class="form-group mb-3">
+                <input type="password" id="regPassword" class="form-control" placeholder="Şifreniz" required minlength="6">
+            </div>
+
+            <!-- Rol Seçimi -->
+            <div class="form-group mb-4">
+                <select id="regRole" class="form-control" required>
+                    <option value="" disabled selected>Rolünüzü Seçiniz</option>
+                    <option value="Student">Öğrenci</option>
+                    <option value="Teacher">Öğretmen</option>
+                </select>
+            </div>
+
+            <!-- Kayıt Butonu (Race Condition korumalı) -->
+            <button type="submit" id="btnRegister" class="btn btn-primary btn-block mb-3">Kayıt Ol</button>
+
+            <!-- Login'e Dönüş Linki -->
+            <a href="/Auth/Login" class="text-decoration-none small font-weight-bold" style="color: #4e73df;">
+                Zaten hesabınız var mı? Giriş Yapın
+            </a>
+        </form>
+    </div>
+
+    <!-- Script Kütüphaneleri -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        const API_BASE = "https://localhost:7113/api/Auth";
+
+        $(document).ready(function () {
+
+            $("#registerForm").submit(function (e) {
+                e.preventDefault();
+
+                const btn = $("#btnRegister");
+                btn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Kayıt Yapılıyor...');
+
+                const requestData = {
+                    firstName: $("#regFirstName").val().trim(),
+                    lastName: $("#regLastName").val().trim(),
+                    email: $("#regEmail").val().trim(),
+                    password: $("#regPassword").val(),
+                    role: $("#regRole").val()
+                };
+
+                $.ajax({
+                    url: `${API_BASE}/register`,
+                    method: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify(requestData),
+                    success: function (res) {
+                        Swal.fire({
+                            title: 'Harika!',
+                            text: 'Kaydınız başarıyla oluşturuldu. Giriş sayfasına yönlendiriliyorsunuz.',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.href = "/Auth/Login";
+                        });
+                    },
+                    error: function (xhr) {
+                        let errorMsg = "Kayıt işlemi sırasında beklenmeyen bir hata oluştu.";
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+
+                        Swal.fire('Kayıt Başarısız', errorMsg, 'error');
+                    },
+                    complete: function () {
+                        btn.prop("disabled", false).text("Kayıt Ol");
+                    }
+                });
+            });
+
+        });
+    </script>
+</body>
+</html>

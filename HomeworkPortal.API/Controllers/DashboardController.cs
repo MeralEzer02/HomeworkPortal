@@ -131,5 +131,52 @@ namespace HomeworkPortal.API.Controllers
 
             return Ok(dto);
         }
+
+        [HttpGet("student")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> GetStudentDashboard()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var now = DateTime.UtcNow;
+
+            var myCourses = await _context.Courses
+                .Include(c => c.Teacher)
+                .Where(c => c.Students.Any(s => s.Id == userId))
+                .ToListAsync();
+
+            var courseIds = myCourses.Select(c => c.Id).ToList();
+
+            var upcomingAssignments = await _context.Assignments
+                .Include(a => a.Course)
+                .Where(a => courseIds.Contains(a.CourseId) && a.DueDate >= now && !a.IsDeleted)
+                .OrderBy(a => a.DueDate)
+                .Take(5)
+                .ToListAsync();
+
+            var dto = new StudentDashboardDto
+            {
+                MyEnrolledCoursesCount = myCourses.Count,
+                PendingAssignmentsCount = upcomingAssignments.Count,
+                MyCourses = myCourses.Select(c => new CourseSummaryDto
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Description = c.Description,
+                    EnrolledStudentCount = c.Students?.Count ?? 0,
+                    TeacherFullName = c.Teacher != null ? c.Teacher.FullName : "Atanmadı"
+                }).ToList(),
+                UpcomingAssignments = upcomingAssignments.Select(a => new AssignmentSummaryDto
+                {
+                    Id = a.Id,
+                    Title = a.Title,
+                    CourseName = a.Course?.Name ?? "",
+                    DueDate = a.DueDate
+                }).ToList()
+            };
+
+            return Ok(dto);
+        }
     }
 }

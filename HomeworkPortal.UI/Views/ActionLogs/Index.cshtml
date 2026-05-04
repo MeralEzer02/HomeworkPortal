@@ -1,0 +1,135 @@
+﻿@{
+    ViewData["Title"] = "İşlem Logları";
+    var role = ViewBag.Role as string;
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">
+        <i class="fas fa-user-secret mr-2 text-danger"></i>Sistem İşlem Logları
+    </h1>
+</div>
+
+<div class="card shadow mb-4 border-left-danger">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-danger">Sistemdeki Tüm Hareketler (Canlı İzleme)</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle mb-0" width="100%" cellspacing="0">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Tarih / Saat</th>
+                        <th>Kullanıcı</th>
+                        <th>İşlem Tipi</th>
+                        <th>Modül / Tablo</th>
+                        <th>Açıklama</th>
+                    </tr>
+                </thead>
+                <tbody id="logsTableBody">
+                    <tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Loglar Yükleniyor...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Sayfalama (Pagination) Alt Yapısı -->
+        <div class="d-flex justify-content-between align-items-center mt-3 px-2">
+            <div id="pageInfo" class="small font-weight-bold text-muted"></div>
+            <nav aria-label="Page navigation">
+                <ul class="pagination pagination-sm mb-0" id="paginationContainer"></ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/tr.min.js"></script>
+
+    <script>
+        const API_BASE = "https://localhost:7113/api/ActionLogs";
+        let currentPage = 1;
+        const pageSize = 15;
+
+        $(document).ready(function () {
+            moment.locale('tr');
+            loadLogs(currentPage);
+        });
+
+        function loadLogs(page) {
+            currentPage = page;
+
+            $.ajax({
+                url: `${API_BASE}?pageNumber=${page}&pageSize=${pageSize}`,
+                method: "GET",
+                beforeSend: function () {
+                    $("#logsTableBody").css("opacity", "0.5");
+                },
+                success: function (res) {
+                    const data = res.data || [];
+                    renderTable(data);
+                    renderPagination(res.totalCount || 0, res.pageNumber || 1, res.totalPages || 1);
+                },
+                error: function (err) {
+                    $("#logsTableBody").html('<tr><td colspan="5" class="text-center text-danger py-4">Loglar çekilirken bir hata oluştu veya yetkiniz yok.</td></tr>');
+                    console.error(err);
+                },
+                complete: function () {
+                    $("#logsTableBody").css("opacity", "1");
+                }
+            });
+        }
+
+        function renderTable(data) {
+            if (data.length === 0) {
+                $("#logsTableBody").html('<tr><td colspan="5" class="text-center text-muted py-4">Sistemde henüz bir işlem kaydı bulunmuyor.</td></tr>');
+                return;
+            }
+
+            let html = "";
+            data.forEach(item => {
+                const dateText = moment(item.createdAt).format('DD.MM.YYYY HH:mm:ss');
+
+                let actionBadge = `<span class="badge badge-secondary p-2">${item.actionType}</span>`;
+                if (item.actionType.includes("CREATED") || item.actionType.includes("REGISTER")) {
+                    actionBadge = `<span class="badge badge-success p-2">${item.actionType}</span>`;
+                } else if (item.actionType.includes("DELETED") || item.actionType.includes("REMOVED")) {
+                    actionBadge = `<span class="badge badge-danger p-2">${item.actionType}</span>`;
+                } else if (item.actionType.includes("UPDATED") || item.actionType.includes("EDITED")) {
+                    actionBadge = `<span class="badge badge-warning text-dark p-2">${item.actionType}</span>`;
+                }
+
+                html += `
+                    <tr>
+                        <td class="text-nowrap small font-weight-bold text-muted">${dateText}</td>
+                        <td><strong>${item.userFullName}</strong></td>
+                        <td>${actionBadge}</td>
+                        <td><span class="badge badge-light border border-secondary p-1">${item.entityName || '-'}</span></td>
+                        <td>${item.description}</td>
+                    </tr>`;
+            });
+
+            $("#logsTableBody").html(html);
+        }
+
+        function renderPagination(totalCount, current, totalPages) {
+            if (totalPages <= 1) {
+                $("#paginationContainer, #pageInfo").empty();
+                return;
+            }
+
+            let html = `<li class="page-item ${current === 1 ? 'disabled' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadLogs(${current - 1})">Önceki</a></li>`;
+
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<li class="page-item ${i === current ? 'active' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadLogs(${i})">${i}</a></li>`;
+            }
+
+            html += `<li class="page-item ${current === totalPages ? 'disabled' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadLogs(${current + 1})">Sonraki</a></li>`;
+
+            $("#paginationContainer").html(html);
+            const startItem = (current - 1) * pageSize + 1;
+            const endItem = Math.min(current * pageSize, totalCount);
+            $("#pageInfo").text(`Toplam ${totalCount} log kaydından ${startItem}-${endItem} arası gösteriliyor.`);
+        }
+    </script>
+}

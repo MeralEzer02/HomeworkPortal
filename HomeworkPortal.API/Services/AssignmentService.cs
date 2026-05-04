@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using HomeworkPortal.API.DTOs;
 using HomeworkPortal.API.Models;
 using HomeworkPortal.API.Repositories;
+using HomeworkPortal.API.Services;
 
 namespace HomeworkPortal.API.Services
 {
@@ -12,16 +13,24 @@ namespace HomeworkPortal.API.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICurrentUserService _currentUserService;
-        private readonly UserManager<AppUser> _userManager; // YENİ EKLENDİ
+        private readonly UserManager<AppUser> _userManager;
         private readonly INotificationService _notificationService;
+        private readonly IProgressUpdateQueue _progressQueue; 
 
-        public AssignmentService(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUserService currentUserService, UserManager<AppUser> userManager, INotificationService notificationService)
+        public AssignmentService(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            ICurrentUserService currentUserService,
+            UserManager<AppUser> userManager,
+            INotificationService notificationService,
+            IProgressUpdateQueue progressQueue) 
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _currentUserService = currentUserService;
-            _userManager = userManager; // YENİ EKLENDİ
+            _userManager = userManager;
             _notificationService = notificationService;
+            _progressQueue = progressQueue;
         }
 
         public async Task<AssignmentReadDto> CreateAssignmentAsync(AssignmentCreateDto dto)
@@ -32,7 +41,6 @@ namespace HomeworkPortal.API.Services
             var course = await _unitOfWork.Courses.GetByIdAsync(dto.CourseId);
             if (course == null) throw new Exception("Ders bulunamadı.");
 
-            // 👑 ADMIN KONTROLÜ
             var user = await _userManager.FindByIdAsync(_currentUserService.UserId);
             var isAdmin = user != null && await _userManager.IsInRoleAsync(user, "Admin");
 
@@ -63,6 +71,12 @@ namespace HomeworkPortal.API.Services
                 }
             }
 
+            await _progressQueue.QueueWorkItemAsync(new ProgressMessage
+            {
+                CourseId = assignment.CourseId,
+                ActionType = "NEW_ASSIGNMENT"
+            });
+
             return _mapper.Map<AssignmentReadDto>(assignment);
         }
 
@@ -74,7 +88,6 @@ namespace HomeworkPortal.API.Services
             var assignment = await _unitOfWork.Assignments.Where(a => a.Id == id, a => a.Course).FirstOrDefaultAsync();
             if (assignment == null) throw new Exception("Ödev bulunamadı.");
 
-            // 👑 ADMIN KONTROLÜ
             var user = await _userManager.FindByIdAsync(_currentUserService.UserId);
             var isAdmin = user != null && await _userManager.IsInRoleAsync(user, "Admin");
 
@@ -90,7 +103,6 @@ namespace HomeworkPortal.API.Services
             var assignment = await _unitOfWork.Assignments.Where(a => a.Id == id, a => a.Course).FirstOrDefaultAsync();
             if (assignment == null) throw new Exception("Ödev bulunamadı.");
 
-            // 👑 ADMIN KONTROLÜ
             var user = await _userManager.FindByIdAsync(_currentUserService.UserId);
             var isAdmin = user != null && await _userManager.IsInRoleAsync(user, "Admin");
 

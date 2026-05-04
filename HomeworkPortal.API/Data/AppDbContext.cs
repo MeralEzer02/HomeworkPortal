@@ -16,6 +16,8 @@ namespace HomeworkPortal.API.Data
         public DbSet<Submission> Submissions { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<FileMetadata> FileMetadatas { get; set; }
+        public DbSet<UserCourseProgress> UserCourseProgresses { get; set; }
+        public DbSet<ActionLog> ActionLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

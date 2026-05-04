@@ -8,7 +8,6 @@
         public int TotalCourses { get; set; }
         public int TotalAssignments { get; set; }
 
-        // Admin için yeni eklenen listeler
         public List<AssignmentSummaryDto> ActiveAssignments { get; set; } = new();
         public List<AssignmentSummaryDto> ExpiredAssignments { get; set; } = new();
         public List<CourseSummaryDto> RecentCourses { get; set; } = new();
@@ -24,6 +23,15 @@
         public List<AssignmentSummaryDto> ActiveAssignments { get; set; } = new();
         public List<AssignmentSummaryDto> ExpiredAssignments { get; set; } = new();
         public List<CourseSummaryDto> RecentCourses { get; set; } = new();
+    }
+
+    // Öğrenci için ana DTO
+    public class StudentDashboardDto
+    {
+        public int MyEnrolledCoursesCount { get; set; }
+        public int PendingAssignmentsCount { get; set; }
+        public List<AssignmentSummaryDto> UpcomingAssignments { get; set; } = new();
+        public List<CourseSummaryDto> MyCourses { get; set; } = new();
     }
 
     // Ödev özet bilgileri
