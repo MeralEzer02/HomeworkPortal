@@ -178,5 +178,28 @@ namespace HomeworkPortal.API.Controllers
 
             return Ok(dto);
         }
+
+        [HttpGet("student/progress")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> GetStudentProgress()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var progressData = await _context.UserCourseProgresses
+                .Include(p => p.Course)
+                .Where(p => p.UserId == userId)
+                .Select(p => new
+                {
+                    CourseName = p.Course.Name,
+                    TotalAssignments = p.TotalAssignments,
+                    SubmittedAssignments = p.SubmittedAssignments,
+                    GradedAssignments = p.GradedAssignments,
+                    CompletionRate = p.CompletionRate
+                })
+                .ToListAsync();
+
+            return Ok(progressData);
+        }
     }
 }

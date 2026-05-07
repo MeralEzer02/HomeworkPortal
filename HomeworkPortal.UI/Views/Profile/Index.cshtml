@@ -5,44 +5,47 @@
 
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">
-        <i class="fas fa-id-card mr-2 text-primary"></i>Yönetim Paneli
+        <i class="fas fa-id-badge mr-2 text-primary"></i>Kullanıcı Profili
     </h1>
 </div>
 
-<!-- ================= GÖRÜNTÜLEME MODU ================= -->
 <div id="viewProfileMode" class="row fade-in">
-    <div class="col-12">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-white">
-                <h6 class="m-0 font-weight-bold text-primary">Kullanıcı Profili</h6>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <!-- Sol Taraf: Fotoğraf ve Rol -->
-                    <div class="col-md-4 text-center border-right">
-                        <img class="img-profile rounded-circle mb-3 shadow border border-primary p-1" src="~/Admin/img/undraw_profile.svg" alt="Profil" style="width: 160px; height: 160px; object-fit: cover;">
-                        <h4 class="font-weight-bold text-dark mb-2" id="viewFullName">Yükleniyor...</h4>
-                        <span class="badge badge-primary px-4 py-2 shadow-sm" id="viewRole" style="font-size: 0.9rem; border-radius: 20px;">Yükleniyor...</span>
+
+    <div class="col-xl-4 col-lg-5 mb-4">
+        <div class="card shadow mb-4 border-bottom-primary h-100">
+            <div class="card-body text-center pt-5 pb-4 d-flex flex-column justify-content-center">
+                <div class="position-relative d-inline-block mb-4 mx-auto">
+                    <img class="img-profile rounded-circle shadow-sm border p-1" src="/Admin/img/undraw_profile.svg" alt="Profil" style="width: 150px; height: 150px; object-fit: cover; background-color: #f8f9fc;">
+                    <div class="position-absolute bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow" style="width: 40px; height: 40px; bottom: 0; right: 0; border: 3px solid white;">
+                        <i class="fas @(role == "Teacher" ? "fa-chalkboard-teacher" : role == "Admin" ? "fa-user-shield" : "fa-user-graduate")"></i>
                     </div>
+                </div>
+                <h4 class="font-weight-bold text-dark mb-1" id="viewFullName">Yükleniyor...</h4>
+                <p class="text-muted mb-3" id="viewEmail">Yükleniyor...</p>
+                <div class="mb-4">
+                    <span class="badge badge-primary px-4 py-2 shadow-sm" id="viewRole" style="font-size: 0.9rem; border-radius: 20px;">Yükleniyor...</span>
+                </div>
+                <hr class="w-100">
+                <button type="button" class="btn btn-outline-primary btn-block font-weight-bold mt-auto shadow-sm" id="btnEditMode">
+                    <i class="fas fa-user-edit mr-2"></i>Bilgilerimi Güncelle
+                </button>
+            </div>
+        </div>
+    </div>
 
-                    <!-- Sağ Taraf: Kişisel Bilgiler -->
-                    <div class="col-md-8 pl-md-5 mt-4 mt-md-0 d-flex flex-column justify-content-center">
-                        <h5 class="font-weight-bold text-primary mb-4"><i class="fas fa-user-circle mr-2"></i>Kişisel Bilgiler</h5>
-
-                        <div class="row mb-3">
-                            <div class="col-sm-4 font-weight-bold text-gray-700">Ad Soyad:</div>
-                            <div class="col-sm-8 text-dark" id="viewNameDetail">Yükleniyor...</div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-sm-4 font-weight-bold text-gray-700">E-Posta Adresi:</div>
-                            <div class="col-sm-8 text-dark" id="viewEmail">Yükleniyor...</div>
-                        </div>
-                        <hr>
-                        <div class="text-right mt-3">
-                            <button type="button" class="btn btn-warning font-weight-bold text-dark px-4 shadow-sm" id="btnEditMode">
-                                <i class="fas fa-user-edit mr-2"></i>Bilgilerimi Güncelle
-                            </button>
-                        </div>
+    <div class="col-xl-8 col-lg-7 mb-4">
+        <div class="card shadow mb-4 border-left-warning h-100">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-white">
+                <h6 class="m-0 font-weight-bold text-warning"><i class="fas fa-medal mr-2"></i>Kazanılan Rozetler (Başarımlar)</h6>
+                <button class="btn btn-sm btn-outline-warning font-weight-bold shadow-sm" data-toggle="modal" data-target="#allBadgesModal">
+                    <i class="fas fa-info-circle mr-1"></i>Tüm Başarımları Gör
+                </button>
+            </div>
+            <div class="card-body bg-light">
+                <div class="row" id="badgesContainer">
+                    <div class="col-12 text-center py-5 text-muted">
+                        <i class="fas fa-spinner fa-spin fa-3x mb-3 text-warning"></i><br>
+                        <h5 class="font-weight-bold">Rozetler Yükleniyor...</h5>
                     </div>
                 </div>
             </div>
@@ -50,62 +53,55 @@
     </div>
 </div>
 
-<!-- ================= DÜZENLEME MODU (Varsayılan Gizli) ================= -->
 <div id="editProfileMode" class="row d-none fade-in">
-    <div class="col-12">
-        <div class="card shadow mb-4 border-left-warning">
+    <div class="col-lg-8 mx-auto">
+        <div class="card shadow mb-4 border-left-primary">
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-white">
-                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-user-cog mr-2"></i>Kullanıcı ve Hesap İşlemleri</h6>
+                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-user-cog mr-2"></i>Hesap Bilgilerini Güncelle</h6>
                 <button class="btn btn-sm btn-secondary shadow-sm" id="btnViewMode">
                     <i class="fas fa-arrow-left mr-1"></i> Profile Dön
                 </button>
             </div>
-            <div class="card-body p-4">
+            <div class="card-body p-5">
                 <form id="updateProfileForm">
-                    <h5 class="font-weight-bold text-gray-700 mb-4 border-bottom pb-2">Hesap Bilgileri</h5>
-
                     <div class="row">
                         <div class="col-md-6 form-group">
                             <label class="font-weight-bold text-gray-600">Adınız</label>
-                            <input type="text" class="form-control" id="editFirstName" required>
+                            <input type="text" class="form-control bg-light" id="editFirstName" required>
                         </div>
                         <div class="col-md-6 form-group">
                             <label class="font-weight-bold text-gray-600">Soyadınız</label>
-                            <input type="text" class="form-control" id="editLastName" required>
+                            <input type="text" class="form-control bg-light" id="editLastName" required>
                         </div>
                     </div>
-
-                    <div class="row">
+                    <div class="row mt-3">
                         <div class="col-md-6 form-group">
                             <label class="font-weight-bold text-gray-600">E-Posta Adresi <small class="text-danger">(Değiştirilemez)</small></label>
-                            <input type="email" class="form-control bg-light" id="editEmail" readonly>
+                            <input type="email" class="form-control" id="editEmail" readonly style="background-color: #e9ecef; cursor: not-allowed;">
                         </div>
                         <div class="col-md-6 form-group">
                             <label class="font-weight-bold text-gray-600">Mevcut Rolünüz</label>
-                            <input type="text" class="form-control bg-light" id="editRole" readonly>
+                            <input type="text" class="form-control" id="editRole" readonly style="background-color: #e9ecef; cursor: not-allowed;">
                         </div>
                     </div>
-
                     <div class="row mt-3">
                         <div class="col-12 form-group">
                             <label class="font-weight-bold text-gray-600">Yeni Şifre <small class="text-primary">(Değiştirmek istemiyorsanız boş bırakın)</small></label>
                             <div class="input-group">
-                                <input type="password" class="form-control border-right-0" id="editPassword" placeholder="Yeni şifrenizi buraya girin...">
+                                <input type="password" class="form-control border-right-0 bg-light" id="editPassword" placeholder="Yeni şifrenizi buraya girin...">
                                 <div class="input-group-append">
-                                    <span class="input-group-text bg-white text-muted" id="togglePasswordVisibility" style="cursor: pointer;">
+                                    <span class="input-group-text bg-light text-muted" id="togglePasswordVisibility" style="cursor: pointer;">
                                         <i class="fas fa-eye" id="togglePasswordIcon"></i>
                                     </span>
                                 </div>
                             </div>
                         </div>
                     </div>
-
                     <hr class="mt-4 mb-4">
-
                     <div class="text-right">
-                        <button type="button" class="btn btn-secondary mr-2" id="btnCancelEdit">İptal</button>
+                        <button type="button" class="btn btn-secondary mr-2 px-4" id="btnCancelEdit">İptal</button>
                         <button type="submit" class="btn btn-primary px-5 shadow-sm" id="btnSaveProfile">
-                            <i class="fas fa-save mr-2"></i>Kaydet
+                            <i class="fas fa-save mr-2"></i>Değişiklikleri Kaydet
                         </button>
                     </div>
                 </form>
@@ -114,15 +110,34 @@
     </div>
 </div>
 
+<div class="modal fade" id="allBadgesModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-warning text-dark border-0">
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-trophy mr-2"></i>Sistemdeki Tüm Başarımlar</h5>
+                <button type="button" class="close text-dark" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body bg-light p-4">
+                <p class="text-muted text-center mb-4">Bu rozetleri kazanmak için ödevlerinizi zamanında teslim etmeye devam edin!</p>
+                <div class="row" id="allBadgesListContainer">
+                    <div class="col-12 text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-warning"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     .fade-in {
-        animation: fadeIn 0.3s ease-in-out;
+        animation: fadeIn 0.4s ease-in-out;
     }
 
     @@keyframes fadeIn {
         from {
             opacity: 0;
-            transform: translateY(10px);
+            transform: translateY(15px);
         }
 
         to {
@@ -130,17 +145,31 @@
             transform: translateY(0);
         }
     }
+
+    .badge-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+        .badge-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+        }
 </style>
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/tr.min.js"></script>
+
     <script>
+        const API_BASE = "https://localhost:7113/api";
+
         $(document).ready(function() {
+            moment.locale('tr');
             let currentUserEmail = "";
             let currentFirstName = "";
             let currentLastName = "";
 
-            // 1. TOKEN'DAN VERİLERİ OKUYUP EKRANA BASMA
             if (typeof jwtToken !== 'undefined' && jwtToken !== null && jwtToken !== "") {
                 try {
                     const base64Url = jwtToken.split('.')[1];
@@ -159,10 +188,9 @@
                     currentLastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
                     let role = "@role";
-                    let displayRole = role === "Student" ? "Öğrenci" : role === "Teacher" ? "Öğretmen" : "Sistem Yöneticisi";
+                    let displayRole = role === "Student" ? "Öğrenci" : role === "Teacher" ? "Eğitmen" : "Sistem Yöneticisi";
 
                     $("#viewFullName").text(fullName);
-                    $("#viewNameDetail").text(fullName);
                     $("#viewEmail").text(currentUserEmail);
                     $("#viewRole").text(displayRole);
 
@@ -170,11 +198,15 @@
                     $("#editLastName").val(currentLastName);
                     $("#editEmail").val(currentUserEmail);
                     $("#editRole").val(displayRole);
-
-                } catch (e) { console.error("Veri okuma hatası:", e); }
+                } catch (e) { console.error("Token verisi okunamadı:", e); }
             }
 
-            // 2. MODLAR ARASI GEÇİŞ (Görüntüleme <-> Düzenleme)
+            loadMyBadges();
+
+            $('#allBadgesModal').on('show.bs.modal', function (e) {
+                loadAllSystemBadges();
+            });
+
             $("#btnEditMode").click(function() {
                 $("#viewProfileMode").addClass("d-none");
                 $("#editProfileMode").removeClass("d-none");
@@ -186,10 +218,8 @@
                 $("#editPassword").val("");
             });
 
-            // 3. KAYDET BUTONU İŞLEMİ
             $("#updateProfileForm").on("submit", function(e) {
                 e.preventDefault();
-
                 let updatedData = {
                     firstName: $("#editFirstName").val(),
                     lastName: $("#editLastName").val(),
@@ -197,7 +227,7 @@
                 };
 
                 $.ajax({
-                    url: "https://localhost:7113/api/Auth/update-profile",
+                    url: `${API_BASE}/Auth/update-profile`,
                     method: "PUT",
                     contentType: "application/json",
                     data: JSON.stringify(updatedData),
@@ -205,14 +235,10 @@
                         $("#btnSaveProfile").prop("disabled", true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Kaydediliyor...');
                     },
                     success: function (res) {
-                        Swal.fire({ icon: 'success', title: 'Başarılı', text: 'Profiliniz başarıyla güncellendi!' });
-
+                        Swal.fire({ icon: 'success', title: 'Harika!', text: 'Profil bilgileriniz başarıyla güncellendi.' });
                         $("#viewFullName").text(res.fullName);
-                        $("#viewNameDetail").text(res.fullName);
-
                         $("#editProfileMode").addClass("d-none");
                         $("#viewProfileMode").removeClass("d-none");
-
                         $("#editPassword").val("");
                     },
                     error: function (err) {
@@ -221,25 +247,105 @@
                         Swal.fire({ icon: 'error', title: 'Hata', text: errorMsg });
                     },
                     complete: function () {
-                        $("#btnSaveProfile").prop("disabled", false).html('<i class="fas fa-save mr-2"></i>Kaydet');
+                        $("#btnSaveProfile").prop("disabled", false).html('<i class="fas fa-save mr-2"></i>Değişiklikleri Kaydet');
                     }
                 });
             });
 
-            // 4. ŞİFRE GÖSTER/GİZLE İŞLEMİ
             $("#togglePasswordVisibility").click(function() {
                 let passwordInput = $("#editPassword");
                 let icon = $("#togglePasswordIcon");
-
                 if (passwordInput.attr("type") === "password") {
                     passwordInput.attr("type", "text");
                     icon.removeClass("fa-eye").addClass("fa-eye-slash");
-                }
-                else {
+                } else {
                     passwordInput.attr("type", "password");
                     icon.removeClass("fa-eye-slash").addClass("fa-eye");
                 }
             });
         });
+
+        function loadMyBadges() {
+            $.ajax({
+                url: `${API_BASE}/Profile/badges`,
+                method: "GET",
+                success: function (res) {
+                    renderBadges(res);
+                },
+                error: function (err) {
+                    $("#badgesContainer").html('<div class="col-12 text-center text-danger py-4"><i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>Rozetler çekilemedi.</div>');
+                }
+            });
+        }
+
+        function renderBadges(badges) {
+            if (!badges || badges.length === 0) {
+                $("#badgesContainer").html(`
+                    <div class="col-12 text-center text-muted py-5">
+                        <i class="fas fa-box-open fa-4x mb-3 opacity-50 text-warning"></i>
+                        <h5 class="font-weight-bold text-dark">Henüz hiç rozet kazanmadın!</h5>
+                        <p class="mb-0">Ödevlerini teslim etmeye başla ve başarımların kilidini aç.</p>
+                    </div>
+                `);
+                return;
+            }
+
+            let html = "";
+            badges.forEach(badge => {
+                const dateEarned = moment(badge.earnedAt).format('DD MMMM YYYY');
+                html += `
+                    <div class="col-md-6 col-lg-6 mb-4">
+                        <div class="card h-100 text-center shadow-sm border-0 badge-card pb-2">
+                            <div class="card-body">
+                                <div class="mb-3 mt-2">
+                                    <i class="${badge.icon} fa-4x" style="filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.15));"></i>
+                                </div>
+                                <h5 class="font-weight-bold text-dark mb-1">${badge.name}</h5>
+                                <p class="text-muted small mb-3" style="min-height: 40px;">${badge.description}</p>
+                                <span class="badge badge-light border text-muted px-3 py-2 w-100" style="font-size:0.85rem;">
+                                    <i class="fas fa-calendar-alt mr-1 text-primary"></i> ${dateEarned}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            $("#badgesContainer").html(html);
+        }
+
+        function loadAllSystemBadges() {
+            $.ajax({
+                url: `${API_BASE}/Profile/all-badges`,
+                method: "GET",
+                success: function (badges) {
+                    if (!badges || badges.length === 0) {
+                        $("#allBadgesListContainer").html('<div class="col-12 text-center text-muted">Sistemde henüz tanımlı rozet yok.</div>');
+                        return;
+                    }
+
+                    let html = "";
+                    badges.forEach(badge => {
+                        html += `
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex align-items-center p-3 bg-white rounded shadow-sm border">
+                                    <div class="mr-3 text-center" style="width: 60px;">
+                                        <i class="${badge.icon} fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="font-weight-bold text-dark mb-1">${badge.name}</h6>
+                                        <p class="text-muted small mb-1">${badge.description}</p>
+                                        <span class="badge badge-info shadow-sm"><i class="fas fa-check-double mr-1"></i> Gerekli Teslim: ${badge.requiredCount} Ödev</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    $("#allBadgesListContainer").html(html);
+                },
+                error: function () {
+                    $("#allBadgesListContainer").html('<div class="col-12 text-center text-danger">Başarımlar yüklenirken hata oluştu.</div>');
+                }
+            });
+        }
     </script>
 }

@@ -22,6 +22,7 @@ namespace HomeworkPortal.API.Services
 
         private readonly IActionLogService _actionLogService;
         private readonly IProgressUpdateQueue _progressQueue;
+        private readonly IBadgeService _badgeService; // 🎯 YENİ EKLENEN BAĞIMLILIK
 
         public SubmissionService(
             IUnitOfWork unitOfWork,
@@ -32,7 +33,8 @@ namespace HomeworkPortal.API.Services
             IFileService fileService,
             ILogger<SubmissionService> logger,
             IActionLogService actionLogService,
-            IProgressUpdateQueue progressQueue)
+            IProgressUpdateQueue progressQueue,
+            IBadgeService badgeService) // 🎯 CONSTRUCTOR'A EKLENDİ
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -43,6 +45,7 @@ namespace HomeworkPortal.API.Services
             _logger = logger;
             _actionLogService = actionLogService;
             _progressQueue = progressQueue;
+            _badgeService = badgeService; // 🎯 ATAMA YAPILDI
         }
 
         public async Task<SubmissionReadDto> SubmitAssignmentAsync(SubmissionCreateDto dto)
@@ -106,6 +109,9 @@ namespace HomeworkPortal.API.Services
                 ActionType = "SUBMITTED",
                 StudentId = studentId
             });
+
+            // 🎯 YENİ EKLENEN: Ödev yüklendikten sonra öğrencinin rozet kazanıp kazanmadığını kontrol et
+            await _badgeService.CheckAndAwardBadgesAsync(studentId);
 
             return _mapper.Map<SubmissionReadDto>(submission);
         }
@@ -192,6 +198,36 @@ namespace HomeworkPortal.API.Services
             var totalCount = await query.CountAsync();
 
             var submissions = await query
+                .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
+                .Take(paginationParams.PageSize)
+                .ToListAsync();
+
+            var dtoList = _mapper.Map<IEnumerable<SubmissionReadDto>>(submissions);
+            return new PagedResult<SubmissionReadDto>(dtoList, totalCount, paginationParams.PageNumber, paginationParams.PageSize);
+        }
+
+        public async Task<PagedResult<SubmissionReadDto>> GetAllSubmissionsAsync(PaginationParams paginationParams)
+        {
+            var user = await _userManager.FindByIdAsync(_currentUserService.UserId);
+            var isAdmin = user != null && await _userManager.IsInRoleAsync(user, "Admin");
+            var isTeacher = user != null && await _userManager.IsInRoleAsync(user, "Teacher");
+
+            var query = _unitOfWork.Submissions.Where(
+                s => !s.IsDeleted,
+                s => s.Assignment,
+                s => s.Assignment.Course,
+                s => s.Student
+            );
+
+            if (isTeacher && !isAdmin)
+            {
+                query = query.Where(s => s.Assignment.Course.TeacherId == _currentUserService.UserId);
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var submissions = await query
+                .OrderByDescending(s => s.SubmissionDate)
                 .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
                 .Take(paginationParams.PageSize)
                 .ToListAsync();

@@ -18,6 +18,8 @@ namespace HomeworkPortal.API.Data
         public DbSet<FileMetadata> FileMetadatas { get; set; }
         public DbSet<UserCourseProgress> UserCourseProgresses { get; set; }
         public DbSet<ActionLog> ActionLogs { get; set; }
+        public DbSet<Badge> Badges { get; set; }
+        public DbSet<UserBadge> UserBadges { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

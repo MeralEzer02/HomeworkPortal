@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http; 
 
 namespace HomeworkPortal.UI.Controllers
 {
-    public class AuthController : BaseController
+    public class AuthController : Controller
     {
         [HttpGet]
         public IActionResult Login()
@@ -32,8 +33,7 @@ namespace HomeworkPortal.UI.Controllers
         [HttpGet]
         public IActionResult Register()
         {
-            var token = Request.Cookies["jwt_token"];
-            if (!string.IsNullOrEmpty(token))
+            if (!string.IsNullOrEmpty(HttpContext.Session.GetString("Token")))
             {
                 return RedirectToAction("Index", "Home");
             }

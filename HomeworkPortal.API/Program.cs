@@ -104,6 +104,9 @@ builder.Services.AddAutoMapper(cfg =>
 // AuthService
 builder.Services.AddScoped<HomeworkPortal.API.Services.IAuthService, HomeworkPortal.API.Services.AuthService>();
 
+// Badge Servisi
+builder.Services.AddScoped<HomeworkPortal.API.Services.IBadgeService, HomeworkPortal.API.Services.BadgeService>();
+
 builder.Services.AddHttpContextAccessor();
 
 // CurrentUserService Kaydı
@@ -168,6 +171,12 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await HomeworkPortal.API.Data.DbSeeder.SeedBadgesAsync(context);
+}
 
 if (app.Environment.IsDevelopment())
 {

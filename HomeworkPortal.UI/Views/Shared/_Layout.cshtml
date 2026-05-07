@@ -52,6 +52,133 @@
         .toast-container {
             z-index: 1055 !important;
         }
+
+        ul.navbar-nav.bg-gradient-primary {
+            background-color: #0a2896 !important;
+            background-image: linear-gradient(180deg, #0a2896 10%, #051650 100%) !important;
+        }
+
+        .text-primary, .btn-link {
+            color: #0a2896 !important;
+        }
+
+        .btn-primary {
+            background-color: #0a2896 !important;
+            border-color: #0a2896 !important;
+        }
+
+            .btn-primary:hover {
+                background-color: #081e70 !important;
+                border-color: #081e70 !important;
+            }
+
+        .card.border-left-primary {
+            border-left-color: #0a2896 !important;
+        }
+
+        body.dark-mode {
+            background-color: #121212 !important;
+            color: #e0e0e0 !important;
+        }
+
+            body.dark-mode #wrapper #content-wrapper {
+                background-color: #1a1a1c !important;
+            }
+
+            body.dark-mode .bg-white,
+            body.dark-mode .bg-light,
+            body.dark-mode .card,
+            body.dark-mode .card-header,
+            body.dark-mode .navbar,
+            body.dark-mode .modal-content,
+            body.dark-mode .dropdown-menu,
+            body.dark-mode .alert {
+                background-color: #26262a !important;
+                border-color: #3a3a40 !important;
+                color: #e0e0e0 !important;
+            }
+
+            body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode h4, body.dark-mode h5, body.dark-mode h6,
+            body.dark-mode .text-gray-800, body.dark-mode .text-gray-900, body.dark-mode .text-dark {
+                color: #f8f9fc !important;
+            }
+
+            body.dark-mode .text-muted, body.dark-mode .text-gray-600 {
+                color: #a0a0a0 !important;
+            }
+
+            body.dark-mode .text-primary {
+                color: #64b5f6 !important;
+            }
+
+            body.dark-mode .text-info {
+                color: #4dd0e1 !important;
+            }
+
+            body.dark-mode .table td,
+            body.dark-mode .table th {
+                background-color: #26262a !important;
+                color: #e0e0e0 !important;
+                border-color: #444 !important;
+            }
+
+            body.dark-mode .table-hover tbody tr:hover td,
+            body.dark-mode .table-hover tbody tr:hover th {
+                background-color: #34343a !important;
+                color: #fff !important;
+            }
+
+            body.dark-mode .table-striped tbody tr:nth-of-type(odd) td,
+            body.dark-mode .table-striped tbody tr:nth-of-type(odd) th {
+                background-color: #1a1a1c !important;
+            }
+
+            body.dark-mode .table thead.thead-dark th {
+                background-color: #111 !important;
+                border-color: #222 !important;
+                color: #fff !important;
+            }
+
+            body.dark-mode .form-control {
+                background-color: #333 !important;
+                border-color: #555 !important;
+                color: #fff !important;
+            }
+
+                body.dark-mode .form-control:focus {
+                    background-color: #3b3b3b !important;
+                    color: #fff !important;
+                    border-color: #64b5f6 !important;
+                }
+
+                body.dark-mode .form-control[readonly] {
+                    background-color: #2a2a2a !important;
+                }
+
+            body.dark-mode .dropdown-item {
+                color: #e0e0e0 !important;
+            }
+
+                body.dark-mode .dropdown-item:hover {
+                    background-color: #3a3b45 !important;
+                    color: #fff !important;
+                }
+
+            body.dark-mode .list-group-item {
+                background-color: #26262a !important;
+                border-color: #444 !important;
+                color: #e0e0e0 !important;
+            }
+
+            body.dark-mode a:not(.btn):not(.nav-link), body.dark-mode .btn-link {
+                color: #64b5f6 !important;
+            }
+
+            body.dark-mode .btn-primary {
+                color: #fff !important;
+                background-color: #2e59d9 !important;
+                border-color: #2e59d9 !important;
+            }
     </style>
 </head>
 
@@ -85,15 +212,18 @@
                 <li class="nav-item @(currentPath.Contains("/users") ? "active" : "")">
                     <a class="nav-link" href="/Users">
                         <i class="fas fa-fw fa-users-cog"></i>
-                        <span>Kullanıcılar</span>
+                        <span>@(userRole == "Teacher" ? "Öğrencilerim" : "Kullanıcılar")</span>
                     </a>
                 </li>
-                <li class="nav-item @(currentPath.Contains("/actionlogs") ? "active" : "")">
-                    <a class="nav-link" href="/ActionLogs">
-                        <i class="fas fa-fw fa-user-secret"></i>
-                        <span>İşlem Logları</span>
-                    </a>
-                </li>
+                @if (userRole == "Admin")
+                {
+                    <li class="nav-item @(currentPath.Contains("/actionlogs") ? "active" : "")">
+                        <a class="nav-link" href="/ActionLogs">
+                            <i class="fas fa-fw fa-user-secret"></i>
+                            <span>İşlem Logları</span>
+                        </a>
+                    </li>
+                }
             }
 
             <hr class="sidebar-divider">
@@ -132,6 +262,7 @@
                 <button class="rounded-circle border-0" id="sidebarToggle"></button>
             </div>
         </ul>
+
         <div id="content-wrapper" class="d-flex flex-column">
 
             <div id="content">
@@ -143,6 +274,11 @@
                     </button>
 
                     <ul class="navbar-nav ml-auto">
+                        <li class="nav-item dropdown no-arrow mx-1">
+                            <a class="nav-link" href="#" id="darkModeToggle" role="button" title="Gece/Gündüz Modu">
+                                <i class="fas fa-moon fa-lg text-gray-600" id="darkModeIcon"></i>
+                            </a>
+                        </li>
                         <div class="topbar-divider d-none d-sm-block"></div>
 
                         <li class="nav-item dropdown no-arrow">
@@ -229,6 +365,30 @@
                     text: errorMsg
                 });
             }
+        });
+
+        // --- DARK MODE ---
+        $(document).ready(function () {
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme === 'dark') {
+                $('body').addClass('dark-mode');
+                $('#darkModeIcon').removeClass('fa-moon text-gray-600').addClass('fa-sun text-warning');
+            }
+
+            $('#darkModeToggle').click(function (e) {
+                e.preventDefault();
+                $('body').toggleClass('dark-mode');
+
+                let theme = 'light';
+                if ($('body').hasClass('dark-mode')) {
+                    theme = 'dark';
+                    $('#darkModeIcon').removeClass('fa-moon text-gray-600').addClass('fa-sun text-warning');
+                } else {
+                    $('#darkModeIcon').removeClass('fa-sun text-warning').addClass('fa-moon text-gray-600');
+                }
+
+                localStorage.setItem('theme', theme);
+            });
         });
     </script>
 
