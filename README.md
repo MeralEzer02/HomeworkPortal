@@ -7,10 +7,10 @@
 ## 🎯 Amaç
 Ödev oluşturma, teslim etme ve değerlendirme süreçlerini dijitalleştirmek.
 
-##Admin Dashboard
+## Admin Dashboard
 <img width="1900" height="910" alt="HomeworkA1" src="https://github.com/user-attachments/assets/8f8151bd-4e4d-415d-8e3d-98ecc34779eb" />
 ---
-##Teacher Dashboard
+## Teacher Dashboard
 <img width="1918" height="908" alt="HomeworkT1" src="https://github.com/user-attachments/assets/422b0a70-e1fc-4529-9eb4-1c8232de5550" />
 
 
