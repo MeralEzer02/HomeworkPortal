@@ -88,8 +88,7 @@
 
             let html = "";
             data.forEach(item => {
-                const dateText = moment(item.createdAt).format('DD.MM.YYYY HH:mm:ss');
-
+            const dateText = moment.utc(item.timestamp).local().format('DD.MM.YYYY HH:mm:ss');
                 let actionBadge = `<span class="badge badge-secondary p-2">${item.actionType}</span>`;
                 if (item.actionType.includes("CREATED") || item.actionType.includes("REGISTER")) {
                     actionBadge = `<span class="badge badge-success p-2">${item.actionType}</span>`;

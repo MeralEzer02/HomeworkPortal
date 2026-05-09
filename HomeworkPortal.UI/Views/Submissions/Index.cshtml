@@ -5,7 +5,7 @@
 
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">
-        <i class="fas fa-check-square mr-2 text-primary"></i>Teslim Yönetimi
+        <i class="fas fa-check-square mr-2 text-primary"></i>Teslim Yönetim Merkezi
     </h1>
 
     @if (role == "Student")
@@ -16,11 +16,46 @@
     }
 </div>
 
-<div class="card shadow mb-4">
-    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-        <h6 class="m-0 font-weight-bold text-primary" id="pageSubtitle">Ödev Teslimleri Yükleniyor...</h6>
+<div class="card shadow mb-4 border-left-primary fade-in">
+    <div class="card-header py-3 bg-white">
+        <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-filter mr-2"></i>Filtrele ve Ara</h6>
     </div>
-    <div class="card-body">
+    <div class="card-body bg-light py-3">
+        <div class="row">
+            <div class="col-md-3 mb-3 mb-md-0">
+                <label class="small font-weight-bold text-gray-700">Ders Seçimi</label>
+                <select id="filterCourse" class="form-control form-control-sm">
+                    <option value="">Tüm Dersler</option>
+                </select>
+            </div>
+
+            <div class="col-md-3 mb-3 mb-md-0">
+                <label class="small font-weight-bold text-gray-700">Değerlendirme Durumu</label>
+                <select id="filterStatus" class="form-control form-control-sm">
+                    <option value="">Tümü</option>
+                    <option value="pending">Not Bekleyenler (Değerlendirilmedi)</option>
+                    <option value="graded">Notlandırılmış Teslimler</option>
+                </select>
+            </div>
+
+            <div class="col-md-3 mb-3 mb-md-0">
+                <label class="small font-weight-bold text-gray-700">Sıralama</label>
+                <select id="sortDropdown" class="form-control form-control-sm">
+                    <option value="date_desc">En Yeni Teslimler (Önce)</option>
+                    <option value="date_asc">En Eski Teslimler (Önce)</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="small font-weight-bold text-gray-700">Hızlı Arama</label>
+                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Öğrenci veya ödev adı...">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow mb-4 fade-in">
+    <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-bordered table-hover align-middle mb-0" width="100%" cellspacing="0">
                 <thead class="thead-dark">
@@ -29,25 +64,20 @@
                         {
                             <th>Öğrenci Adı</th>
                         }
-                        else
-                        {
-                            <th>Ödev Başlığı</th>
-                        }
-                        <th>Dosya</th>
+                        <th>Ders ve Ödev Bilgisi</th>
+                        <th class="text-center">Dosya</th>
                         <th>Öğrenci Notu (Açıklama)</th>
-                        <th>Yükleme Tarihi</th>
-                        <th>Not (Puan)</th>
-                        <th>İşlem</th>
+                        <th>Teslim Tarihi</th>
+                        <th class="text-center">Durum / Puan</th>
+                        <th class="text-center">İşlem</th>
                     </tr>
                 </thead>
                 <tbody id="submissionTableBody">
-                    <tr><td colspan="6" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Veriler Yükleniyor...</td></tr>
+                    <tr><td colspan="7" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3"></i><br>Bütün teslimler yükleniyor...</td></tr>
                 </tbody>
             </table>
         </div>
-
-        <!-- Sayfalama (Pagination) Alt Yapısı -->
-        <div class="d-flex justify-content-between align-items-center mt-3 px-2">
+        <div class="d-flex justify-content-between align-items-center p-3 border-top bg-light">
             <div id="pageInfo" class="small font-weight-bold text-muted"></div>
             <nav aria-label="Page navigation">
                 <ul class="pagination pagination-sm mb-0" id="paginationContainer"></ul>
@@ -56,28 +86,28 @@
     </div>
 </div>
 
-@* Ödev Yükleme Modalı (Sadece Öğrenci) *@
-@if (role == "Student")
+@* Notlandırma Modalı (Öğretmen/Admin İçin) *@
+@if (role == "Teacher" || role == "Admin")
 {
-    <div class="modal fade" id="uploadModal" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Ödev Dosyasını Yükle</h5>
-                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    <div class="modal fade" id="gradeModal" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-warning text-dark border-0">
+                    <h5 class="modal-title font-weight-bold"><i class="fas fa-star mr-2"></i>Ödevi Değerlendir</h5>
+                    <button type="button" class="close text-dark" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
-                <div class="modal-body">
-                    <form id="uploadForm">
-                        <input type="hidden" id="uploadAssignmentId">
+                <div class="modal-body bg-light p-4">
+                    <form id="gradeForm">
+                        <input type="hidden" id="gradeSubmissionId">
                         <div class="form-group">
-                            <label class="font-weight-bold">Dosya (PDF, DOCX, ZIP, RAR - Max 5MB)</label>
-                            <input type="file" id="submissionFile" class="form-control-file" required accept=".pdf,.doc,.docx,.zip,.rar">
+                            <label class="font-weight-bold text-dark">Verilecek Not (0-100)</label>
+                            <input type="number" id="gradeValue" class="form-control form-control-lg text-center font-weight-bold" required min="0" max="100" placeholder="Örn: 85">
                         </div>
-                        <div class="form-group">
-                            <label class="font-weight-bold">Öğretmene Notun (Opsiyonel)</label>
-                            <textarea id="submissionNote" class="form-control" rows="3" placeholder="Ödevle ilgili eklemek istediklerinizi yazabilirsiniz..."></textarea>
+                        <div class="form-group mt-3">
+                            <label class="font-weight-bold text-dark">Geri Bildirim (Opsiyonel)</label>
+                            <textarea id="gradeFeedback" class="form-control" rows="3" placeholder="Öğrenciye iletilecek değerlendirme notunu buraya yazabilirsiniz..."></textarea>
                         </div>
-                        <button type="submit" class="btn btn-success btn-block" id="btnUploadSubmit">Dosyayı Gönder</button>
+                        <button type="submit" class="btn btn-warning btn-block font-weight-bold btn-lg mt-4 shadow-sm" id="btnGradeSubmit">Puanı Kaydet</button>
                     </form>
                 </div>
             </div>
@@ -85,34 +115,23 @@
     </div>
 }
 
-@* Notlandırma Modalı (Teacher / Admin) *@
-@if (role == "Teacher" || role == "Admin")
-{
-    <div class="modal fade" id="gradeModal" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title">Ödevi Notlandır</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                </div>
-                <div class="modal-body">
-                    <form id="gradeForm">
-                        <input type="hidden" id="gradeSubmissionId">
-                        <div class="form-group">
-                            <label class="font-weight-bold">Verilecek Not (0-100)</label>
-                            <input type="number" id="gradeValue" class="form-control" required min="0" max="100">
-                        </div>
-                        <div class="form-group">
-                            <label class="font-weight-bold">Geri Bildirim (Açıklama)</label>
-                            <textarea id="gradeFeedback" class="form-control" rows="3" placeholder="Öğrenciye iletilecek değerlendirme notu..."></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-warning btn-block font-weight-bold" id="btnGradeSubmit">Puanı Kaydet</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-}
+<style>
+    .fade-in {
+        animation: fadeIn 0.4s ease-in-out;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -120,58 +139,49 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/tr.min.js"></script>
 
     <script>
-        const API_BASE = "https://localhost:7113/api/Submissions";
+        const API_BASE = "https://localhost:7113/api";
         const USER_ROLE = "@role";
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const ASSIGNMENT_ID = urlParams.get('assignmentId');
-
         let currentPage = 1;
-        const pageSize = 10;
+        const pageSize = 50; // Tek seferde çok veri gelsin
         let globalSubmissions = [];
 
         $(document).ready(function () {
             moment.locale('tr');
 
-            checkContextAndLoad();
+            // 1. Sayfa açılır açılmaz hem dersleri hem de BÜTÜN teslimleri çek
+            loadFilterCourses();
+            loadSubmissions(1);
 
-            if (USER_ROLE === "Student") {
-                handleUploadForm();
-
-                if(ASSIGNMENT_ID) {
-                    $("#btnOpenUploadModal").show().click(function() {
-                        $("#uploadAssignmentId").val(ASSIGNMENT_ID);
-                        $("#uploadModal").modal("show");
-                    });
-                }
-            }
+            // Filtre elemanlarına olay dinleyicileri ekle
+            $("#searchInput").on("keyup", applyFiltersAndRender);
+            $("#sortDropdown, #filterCourse, #filterStatus").on("change", applyFiltersAndRender);
 
             if (USER_ROLE === "Teacher" || USER_ROLE === "Admin") {
                 handleGradeForm();
             }
         });
 
-        function checkContextAndLoad() {
-            if (USER_ROLE === "Student") {
-                $("#pageSubtitle").text("Benim Yüklediğim Tüm Ödevler");
-                loadSubmissions(1);
-            } else {
-                if (ASSIGNMENT_ID) {
-                    $("#pageSubtitle").text("Seçili Ödevin Teslim Listesi");
-                    loadSubmissions(1);
-                } else {
-                    $("#submissionTableBody").html(`<tr><td colspan="6" class="text-center text-warning py-4">Lütfen önce <b>Ödevler</b> sayfasından teslimlerini görmek istediğiniz bir ödevi seçin.</td></tr>`);
-                    $("#pageSubtitle").text("Ödev Seçilmedi");
+        // 🎯 YENİ: Filtre için ders listesini doldurur
+        function loadFilterCourses() {
+            $.ajax({
+                url: `${API_BASE}/Courses?pageNumber=1&pageSize=100`,
+                method: "GET",
+                success: function (res) {
+                    const courses = res.data || res;
+                    courses.forEach(c => {
+                        $("#filterCourse").append(`<option value="${c.name}">${c.name}</option>`);
+                    });
                 }
-            }
+            });
         }
 
         function loadSubmissions(page) {
             currentPage = page;
 
             let endpoint = USER_ROLE === "Student"
-                ? `${API_BASE}/student?pageNumber=${page}&pageSize=${pageSize}`
-                : `${API_BASE}/assignment/${ASSIGNMENT_ID}?pageNumber=${page}&pageSize=${pageSize}`;
+                ? `${API_BASE}/Submissions/student?pageNumber=${page}&pageSize=${pageSize}`
+                : `${API_BASE}/Submissions/all?pageNumber=${page}&pageSize=${pageSize}`;
 
             $.ajax({
                 url: endpoint,
@@ -180,14 +190,12 @@
                     $("#submissionTableBody").css("opacity", "0.5");
                 },
                 success: function (res) {
-                    const data = res.data || res || [];
-                    globalSubmissions = data;
-
-                    renderTable(data);
+                    globalSubmissions = res.data || res || [];
+                    applyFiltersAndRender();
                     renderPagination(res.totalCount || 0, res.pageNumber || 1, res.totalPages || 1);
                 },
                 error: function () {
-                    $("#submissionTableBody").html('<tr><td colspan="6" class="text-center text-danger py-4">Veriler çekilirken bir hata oluştu.</td></tr>');
+                    $("#submissionTableBody").html('<tr><td colspan="7" class="text-center text-danger py-4 font-weight-bold">Veriler çekilirken bir hata oluştu. Lütfen sayfayı yenileyin.</td></tr>');
                 },
                 complete: function() {
                     $("#submissionTableBody").css("opacity", "1");
@@ -195,41 +203,76 @@
             });
         }
 
+        function applyFiltersAndRender() {
+            let filtered = [...globalSubmissions];
+
+            // 1. Ders Filtresi
+            const selectedCourse = $("#filterCourse").val();
+            if (selectedCourse) {
+                filtered = filtered.filter(s => s.courseName === selectedCourse);
+            }
+
+            // 2. Durum Filtresi (Not Bekleyenler vs)
+            const selectedStatus = $("#filterStatus").val();
+            if (selectedStatus === "pending") {
+                filtered = filtered.filter(s => s.grade === null || s.grade === undefined);
+            } else if (selectedStatus === "graded") {
+                filtered = filtered.filter(s => s.grade !== null && s.grade !== undefined);
+            }
+
+            // 3. Metin Arama
+            const searchText = $("#searchInput").val().toLowerCase();
+            if (searchText) {
+                filtered = filtered.filter(s =>
+                    (s.studentFullName && s.studentFullName.toLowerCase().includes(searchText)) ||
+                    (s.assignmentTitle && s.assignmentTitle.toLowerCase().includes(searchText)) ||
+                    (s.courseName && s.courseName.toLowerCase().includes(searchText))
+                );
+            }
+
+            // 4. Sıralama
+            const sortBy = $("#sortDropdown").val();
+            if (sortBy === "date_desc") filtered.sort((a, b) => new Date(b.submissionDate) - new Date(a.submissionDate));
+            else if (sortBy === "date_asc") filtered.sort((a, b) => new Date(a.submissionDate) - new Date(b.submissionDate));
+
+            renderTable(filtered);
+        }
+
         function renderTable(data) {
             if (data.length === 0) {
-                $("#submissionTableBody").html('<tr><td colspan="6" class="text-center text-muted py-4">Henüz bir teslim kaydı bulunmuyor.</td></tr>');
+                $("#submissionTableBody").html('<tr><td colspan="7" class="text-center text-muted py-5"><i class="fas fa-search fa-2x mb-3 opacity-50"></i><br>Seçilen filtrelere uygun teslim bulunamadı.</td></tr>');
                 return;
             }
 
             let html = "";
             data.forEach(item => {
-                const dateText = moment(item.submittedAt).format('DD.MM.YYYY HH:mm');
+                const dateText = moment(item.submissionDate || item.submittedAt).format('DD.MM.YYYY HH:mm');
                 const fileLink = item.filePath
-                    ? `<a href="https://localhost:7113/${item.filePath}" target="_blank" class="btn btn-sm btn-outline-info"><i class="fas fa-download mr-1"></i>İndir</a>`
+                    ? `<a href="https://localhost:7113/${item.filePath}" target="_blank" class="btn btn-sm btn-outline-info shadow-sm"><i class="fas fa-download mr-1"></i>İndir</a>`
                     : '-';
 
                 let gradeHtml = "";
                 if (item.grade !== null && item.grade !== undefined) {
-                    gradeHtml = `<span class="badge badge-success p-2">Not: ${item.grade}</span>`;
-                    if(item.feedback) gradeHtml += `<div class="small text-muted mt-1">${item.feedback}</div>`;
+                    gradeHtml = `<span class="badge badge-success px-3 py-2 shadow-sm" style="font-size: 0.9rem;">Not: ${item.grade}</span>`;
                 } else {
-                    gradeHtml = `<span class="badge badge-warning text-dark p-2">Bekliyor</span>`;
+                    gradeHtml = `<span class="badge badge-warning text-dark px-3 py-2 shadow-sm" style="font-size: 0.9rem;">Not Bekliyor</span>`;
                 }
 
                 html += `<tr>`;
-
                 if (USER_ROLE === "Teacher" || USER_ROLE === "Admin") {
-                    html += `<td><strong>${item.studentFullName || 'Öğrenci'}</strong></td>`;
-                } else {
-                    html += `<td><strong>${item.assignmentTitle || 'Ödev'}</strong></td>`;
+                    html += `<td><strong class="text-dark">${item.studentFullName || 'Bilinmiyor'}</strong></td>`;
                 }
 
                 html += `
-                    <td>${fileLink}</td>
-                    <td class="text-muted small">${item.studentNote || '-'}</td>
+                    <td>
+                        <div class="small text-primary font-weight-bold mb-1"><i class="fas fa-book mr-1"></i>${item.courseName || 'Kurs Bilgisi Yok'}</div>
+                        <div class="text-dark">${item.assignmentTitle || 'Ödev Başlığı Yok'}</div>
+                    </td>
+                    <td class="text-center">${fileLink}</td>
+                    <td class="text-muted small">${item.studentNote || item.feedback || '-'}</td>
                     <td>${dateText}</td>
-                    <td>${gradeHtml}</td>
-                    <td>${renderActions(item)}</td>
+                    <td class="text-center">${gradeHtml}</td>
+                    <td class="text-center">${renderActions(item)}</td>
                 </tr>`;
             });
 
@@ -237,13 +280,10 @@
         }
 
         function renderActions(item) {
-            let actions = "";
             if (USER_ROLE === "Teacher" || USER_ROLE === "Admin") {
-                actions += `<button class="btn btn-sm btn-warning font-weight-bold" onclick="openGradeModal(${item.id})"><i class="fas fa-star mr-1"></i>Puan Ver</button>`;
-            } else {
-                actions += `<span class="text-muted small"><i class="fas fa-info-circle mr-1"></i>Sadece Görüntüleme</span>`;
+                return `<button class="btn btn-sm btn-warning font-weight-bold shadow-sm" onclick="openGradeModal(${item.id})"><i class="fas fa-star mr-1"></i>Puan Ver</button>`;
             }
-            return actions;
+            return `<span class="text-muted small"><i class="fas fa-check text-success mr-1"></i>Teslim Edildi</span>`;
         }
 
         function renderPagination(totalCount, current, totalPages) {
@@ -251,50 +291,16 @@
                 $("#paginationContainer, #pageInfo").empty();
                 return;
             }
-
             let html = `<li class="page-item ${current === 1 ? 'disabled' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadSubmissions(${current - 1})">Önceki</a></li>`;
             for (let i = 1; i <= totalPages; i++) {
                 html += `<li class="page-item ${i === current ? 'active' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadSubmissions(${i})">${i}</a></li>`;
             }
             html += `<li class="page-item ${current === totalPages ? 'disabled' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadSubmissions(${current + 1})">Sonraki</a></li>`;
-
             $("#paginationContainer").html(html);
+
             const startItem = (current - 1) * pageSize + 1;
             const endItem = Math.min(current * pageSize, totalCount);
-            $("#pageInfo").text(`Toplam ${totalCount} kayıttan ${startItem}-${endItem} arası gösteriliyor.`);
-        }
-
-        function handleUploadForm() {
-            $("#uploadForm").on("submit", function (e) {
-                e.preventDefault();
-
-                let formData = new FormData();
-                formData.append("AssignmentId", $("#uploadAssignmentId").val());
-                formData.append("StudentNote", $("#submissionNote").val());
-
-                let fileInput = $("#submissionFile")[0].files[0];
-                if (fileInput) formData.append("File", fileInput);
-
-                const btn = $("#btnUploadSubmit");
-                btn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Yükleniyor...');
-
-                $.ajax({
-                    url: API_BASE,
-                    method: "POST",
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function () {
-                        $("#uploadModal").modal("hide");
-                        $("#uploadForm")[0].reset();
-                        Swal.fire('Harika!', 'Ödev dosyanız başarıyla yüklendi.', 'success');
-                        loadSubmissions(1);
-                    },
-                    complete: function () {
-                        btn.prop("disabled", false).text("Dosyayı Gönder");
-                    }
-                });
-            });
+            $("#pageInfo").text(`Toplam ${totalCount} teslimattan ${startItem}-${endItem} arası gösteriliyor.`);
         }
 
         function handleGradeForm() {
@@ -307,17 +313,22 @@
                 };
 
                 const btn = $("#btnGradeSubmit");
-                btn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Kaydediliyor...');
+                btn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Kaydediliyor...');
 
                 $.ajax({
-                    url: `${API_BASE}/${subId}/grade`,
+                    url: `${API_BASE}/Submissions/${subId}/grade`,
                     method: "POST",
                     contentType: "application/json",
                     data: JSON.stringify(data),
                     success: function () {
                         $("#gradeModal").modal("hide");
-                        Swal.fire('Başarılı', 'Not başarıyla kaydedildi.', 'success');
+                        Swal.fire('Başarılı!', 'Öğrencinin notu başarıyla sisteme işlendi.', 'success');
                         loadSubmissions(currentPage);
+                    },
+                    error: function(err) {
+                        let msg = "Not kaydedilirken hata oluştu.";
+                        if(err.responseJSON && err.responseJSON.message) msg = err.responseJSON.message;
+                        Swal.fire('Hata', msg, 'error');
                     },
                     complete: function () {
                         btn.prop("disabled", false).text("Puanı Kaydet");

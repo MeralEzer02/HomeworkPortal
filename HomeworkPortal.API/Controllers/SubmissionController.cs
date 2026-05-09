@@ -51,5 +51,13 @@ namespace HomeworkPortal.API.Controllers
             await _submissionService.GradeSubmissionAsync(id, dto);
             return Ok(new { message = "Ödev başarıyla notlandırıldı." });
         }
+
+        [HttpGet("all")]
+        [Authorize(Roles = "Teacher,Admin")]
+        public async Task<IActionResult> GetAllSubmissions([FromQuery] PaginationParams paginationParams)
+        {
+            var result = await _submissionService.GetAllSubmissionsAsync(paginationParams);
+            return Ok(result);
+        }
     }
 }
