@@ -72,6 +72,41 @@
     </div>
 
     <div class="row">
+        <div class="col-xl-5 col-lg-6 mb-4">
+            <div class="card shadow mb-4 h-100">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-chart-pie mr-2"></i>Ödev Dağılımı (Kurs Bazlı Pasta)</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-7">
+                            <div class="chart-pie pb-2" style="height: 230px;">
+                                <canvas id="submissionsPieChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-5 small" id="pieChartLegendContainer">
+                            <i class="fas fa-spinner fa-spin text-muted mr-1"></i>Yükleniyor...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-7 col-lg-6 mb-4">
+            <div class="card shadow mb-4 h-100">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-chart-bar mr-2"></i>Kurslardaki Öğrenci Sayıları</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-bar" style="height: 250px;">
+                        <canvas id="coursesBarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
         <div class="col-lg-6 mb-4">
             <div class="card shadow mb-4">
                 <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center">
@@ -100,40 +135,10 @@
             </div>
         </div>
     </div>
-
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-list mr-2"></i>Sistemdeki Son Kurslar</h6>
-                    <a href="/Courses" class="btn btn-sm btn-outline-primary font-weight-bold">Tümünü Görüntüle</a>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle">
-                            <thead class="thead-dark">
-                                <tr>
-                                    <th>Kurs Adı</th>
-                                    <th>Açıklama</th>
-                                    @if (!isTeacher)
-                                    {
-                                        <th>Sorumlu Öğretmen</th>
-                                    }
-                                    <th class="text-center">Kayıtlı Öğrenci</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dashboardCoursesTable">
-                                <tr><td colspan="@(isTeacher ? "3" : "4")" class="text-center text-muted"><i class="fas fa-spinner fa-spin mr-2"></i>Yükleniyor...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 }
 else
 {
+    // ÖĞRENCİ EKRANI
     <div class="row mb-4">
         <div class="col-xl-6 col-md-6 mb-4">
             <div class="card border-left-info shadow h-100 py-2">
@@ -164,6 +169,21 @@ else
         </div>
     </div>
 
+    <div class="row">
+        <div class="col-xl-12 col-lg-12 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-chart-line mr-2"></i>Ders İlerlemelerim (Grafik)</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area" style="height: 300px;">
+                        <canvas id="studentProgressChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row" id="studentProgressRow">
         <div class="col-lg-6 mb-4">
             <div class="card shadow mb-4">
@@ -186,10 +206,28 @@ else
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/tr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
         const USER_ROLE = "@role";
         const API_BASE = "https://localhost:7113/api";
+
+        let pieChart = null;
+        let barChart = null;
+        let studentLineChart = null;
+
+        const getChartTextColor = () => $('body').hasClass('dark-mode') ? '#e0e0e0' : '#858796';
+        const getChartGridColor = () => $('body').hasClass('dark-mode') ? '#444444' : '#f2f2f2';
+
+        const chartColors = [
+            '#4e73df', // primary
+            '#1cc88a', // success
+            '#36b9cc', // info
+            '#f6c23e', // warning
+            '#e74a3b', // danger
+            '#858796', // secondary
+            '#5a5c69'  // dark gray
+        ];
 
         $(document).ready(function () {
             moment.locale('tr');
@@ -217,15 +255,20 @@ else
                         $("#statTotalTeachersOrCourses").text(res.totalTeachers);
                         $("#statTotalCoursesOrAssignments").text(res.totalCourses);
                         $("#statTotalAssignmentsOrPending").text(res.totalAssignments);
+
+                        drawTeacherAdminCharts(res.recentCourses, res.courseSubmissionStats);
+
                     } else if (rolePath === "teacher") {
                         $("#statTotalStudents").text(res.myTotalStudents);
                         $("#statTotalTeachersOrCourses").text(res.myTotalCourses);
                         $("#statTotalCoursesOrAssignments").text(res.myTotalAssignments);
                         $("#statTotalAssignmentsOrPending").text(res.pendingSubmissions);
+
+                        drawTeacherAdminCharts(res.recentCourses, res.courseSubmissionStats);
+
                     } else if (rolePath === "student") {
                         $("#statStudentCourses").text(res.myEnrolledCoursesCount);
                         $("#statStudentPendingAssignments").text(res.pendingAssignmentsCount);
-
                         renderAssignmentList(res.upcomingAssignments, "#studentUpcomingAssignmentsList", "Harika, şu an bekleyen ödevin yok!", "success");
                     }
 
@@ -244,25 +287,154 @@ else
                             .sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate))
                             .slice(0, 3);
                         renderAssignmentList(expiredList, "#expiredAssignmentsList", "Süresi dolmuş ödev yok.", "danger");
-
-                        let coursesList = (res.recentCourses || [])
-                            .sort((a, b) => b.id - a.id)
-                            .slice(0, 5);
-                        renderCoursesTable(coursesList, rolePath === "teacher");
                     }
 
-                    // Onboarding Kontrolü
                     checkOnboarding(USER_ROLE, res);
                 },
-                error: function (xhr) {
+                error: function () {
                     $(".stat-widget").text("Hata!");
-                    if (xhr.status === 401 || xhr.status === 403) {
-                        Swal.fire("Yetki Hatası", "Dashboard verilerini görüntüleme yetkiniz yok.", "warning");
-                    } else {
-                        Swal.fire("Bağlantı Hatası", "Dashboard verileri alınamadı.", "error");
-                    }
                 }
             });
+        }
+
+        // --- GRAFİK ÇİZİM FONKSİYONLARI ---
+
+        function drawTeacherAdminCharts(courses, courseStats) {
+            const textColor = getChartTextColor();
+            const gridColor = getChartGridColor();
+
+            // PASTA GRAFİĞİ VE DİNAMİK YAN LEJANT
+            if (pieChart) pieChart.destroy();
+            const ctxPie = document.getElementById("submissionsPieChart");
+            const legendContainer = document.getElementById("pieChartLegendContainer");
+
+            if(ctxPie && courseStats && courseStats.length > 0) {
+                const labels = courseStats.map(s => s.courseName.length > 12 ? s.courseName.substring(0, 12) + '...' : s.courseName);
+                const data = courseStats.map(s => s.submissionCount);
+
+                const backgroundColors = chartColors.slice(0, courseStats.length);
+
+                pieChart = new Chart(ctxPie, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: backgroundColors,
+                            hoverBorderColor: "rgba(234, 236, 244, 1)",
+                        }],
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                    },
+                });
+
+                let legendHtml = "";
+                courseStats.forEach((stat, index) => {
+                    const color = backgroundColors[index];
+                    const courseDisplayName = stat.courseName.length > 20 ? stat.courseName.substring(0, 18) + '...' : stat.courseName;
+                    legendHtml += `
+                        <div class="d-flex align-items-center mb-2 fade-in" title="${stat.courseName}: ${stat.submissionCount}">
+                            <i class="fas fa-circle mr-2" style="color: ${color}; font-size: 0.8rem;"></i>
+                            <span class="font-weight-bold text-gray-800" style="white-space: nowrap;">${courseDisplayName}: ${stat.submissionCount}</span>
+                        </div>
+                    `;
+                });
+                $(legendContainer).html(legendHtml);
+
+            } else if (ctxPie && legendContainer) {
+                if(pieChart) pieChart.destroy();
+                $(ctxPie).parents('.chart-pie').hide();
+                $(legendContainer).html('<div class="text-muted text-center py-4">Henüz ödev teslimatı yok.</div>');
+            }
+
+            // ÇUBUK GRAFİĞİ
+            if (barChart) barChart.destroy();
+            const ctxBar = document.getElementById("coursesBarChart");
+            if(ctxBar && courses && courses.length > 0) {
+
+                const labels = courses.map(c => c.name.length > 15 ? c.name.substring(0, 15) + '...' : c.name);
+                const data = courses.map(c => c.enrolledStudentCount);
+
+                barChart = new Chart(ctxBar, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: "Öğrenci Sayısı",
+                            backgroundColor: "#4e73df",
+                            hoverBackgroundColor: "#2e59d9",
+                            borderColor: "#4e73df",
+                            data: data,
+                            barPercentage: 0.6, 
+                            categoryPercentage: 0.7,
+                            maxBarThickness: 50
+                        }],
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: textColor } },
+                            y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0, beginAtZero: true } }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+        }
+
+        function loadStudentProgress() {
+            $.ajax({
+                url: `${API_BASE}/Dashboard/student/progress`,
+                method: "GET",
+                success: function (res) {
+                    renderProgressBars(res);
+                    drawStudentProgressChart(res);
+                }
+            });
+        }
+
+        function drawStudentProgressChart(progressData) {
+            if(!progressData || progressData.length === 0) return;
+
+            const textColor = getChartTextColor();
+            const gridColor = getChartGridColor();
+
+            if (studentLineChart) studentLineChart.destroy();
+            const ctxLine = document.getElementById("studentProgressChart");
+
+            if(ctxLine) {
+                const labels = progressData.map(p => p.courseName.length > 15 ? p.courseName.substring(0, 15) + '...' : p.courseName);
+                const data = progressData.map(p => p.completionRate);
+
+                studentLineChart = new Chart(ctxLine, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: "Tamamlama Oranı (%)",
+                            lineTension: 0.3,
+                            backgroundColor: "rgba(28, 200, 138, 0.05)",
+                            borderColor: "rgba(28, 200, 138, 1)",
+                            pointRadius: 5,
+                            pointBackgroundColor: "rgba(28, 200, 138, 1)",
+                            pointBorderColor: "rgba(255, 255, 255, 0.8)",
+                            pointHoverRadius: 7,
+                            data: data,
+                            fill: true
+                        }],
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: textColor } },
+                            y: { grid: { color: gridColor }, ticks: { color: textColor, max: 100, min: 0 } }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
         }
 
         function renderAssignmentList(assignments, containerId, emptyMessage, badgeType) {
@@ -287,92 +459,13 @@ else
             $(containerId).html(html);
         }
 
-        function renderCoursesTable(courses, isTeacher) {
-            if (!courses || courses.length === 0) {
-                const colSpan = isTeacher ? "3" : "4";
-                $("#dashboardCoursesTable").html(`<tr><td colspan="${colSpan}" class="text-center text-muted py-4">Gösterilecek kurs bulunamadı.</td></tr>`);
-                return;
-            }
-
-            let html = "";
-            courses.forEach(c => {
-                let teacherCol = isTeacher ? "" : `<td><span class="badge badge-info p-2"><i class="fas fa-chalkboard-teacher mr-1"></i>${c.teacherFullName || 'Atanmadı'}</span></td>`;
-                html += `
-                    <tr>
-                        <td><strong class="text-dark">${c.name}</strong></td>
-                        <td>${c.description || '-'}</td>
-                        ${teacherCol}
-                        <td class="text-center">
-                            <span class="badge badge-primary p-2" style="font-size: 0.9em;">
-                                <i class="fas fa-users mr-1"></i> ${c.enrolledStudentCount} Öğrenci
-                            </span>
-                        </td>
-                    </tr>
-                `;
-            });
-            $("#dashboardCoursesTable").html(html);
-        }
-
-        function checkOnboarding(role, data) {
-            // ÖĞRETMEN YÖNLENDİRMESİ
-            if (role === "Teacher" && data.myTotalCourses === 0) {
-                Swal.fire({
-                    title: 'Eğitmen Paneline Hoş Geldiniz! 🎓',
-                    text: 'Sistemde henüz hiç kurs oluşturmamışsınız. Öğrencilerinize ulaşmak ve ödevler vermek için ilk adımınızı atın.',
-                    icon: 'info',
-                    showCancelButton: true,
-                    confirmButtonColor: '#4e73df',
-                    cancelButtonColor: '#858796',
-                    confirmButtonText: '<i class="fas fa-plus"></i> Hemen Kurs Oluştur',
-                    cancelButtonText: 'Daha Sonra',
-                    allowOutsideClick: false
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        window.location.href = "/Courses";
-                    }
-                });
-            }
-
-            // ÖĞRENCİ YÖNLENDİRMESİ
-            else if (role === "Student" && data.myEnrolledCoursesCount === 0) {
-                Swal.fire({
-                    title: 'Eğitim Yolculuğunuz Başlıyor! 🚀',
-                    text: 'Aramıza hoş geldin! Görünen o ki henüz hiçbir kursa kayıtlı değilsin. Hadi hemen kursları keşfet ve öğrenmeye başla.',
-                    icon: 'success',
-                    showCancelButton: true,
-                    confirmButtonColor: '#1cc88a',
-                    cancelButtonColor: '#858796',
-                    confirmButtonText: '<i class="fas fa-search"></i> Kursları Keşfet',
-                    cancelButtonText: 'Paneli İncele',
-                    allowOutsideClick: false
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        window.location.href = "/Courses";
-                    }
-                });
-            }
-        }
-
-        function loadStudentProgress() {
-            $.ajax({
-                url: `${API_BASE}/Dashboard/student/progress`,
-                method: "GET",
-                success: function (res) {
-                    renderProgressBars(res);
-                },
-                error: function (err) {
-                    console.error("İlerleme verileri çekilemedi", err);
-                }
-            });
-        }
-
         function renderProgressBars(progressData) {
             if (!progressData || progressData.length === 0) return;
 
             let html = `
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-info"><i class="fas fa-chart-line mr-2"></i>Ders İlerlemelerim</h6>
+                    <h6 class="m-0 font-weight-bold text-info"><i class="fas fa-tasks mr-2"></i>Ders İlerlemelerim (Çubuk)</h6>
                 </div>
                 <div class="card-body">`;
 
@@ -394,6 +487,21 @@ else
             html += `</div></div>`;
 
             $("#studentProgressContainer").html(html);
+        }
+
+        function checkOnboarding(role, data) {
+            const isDarkMode = $('body').hasClass('dark-mode');
+            if (role === "Teacher" && data.myTotalCourses === 0) {
+                if (!localStorage.getItem('teacher_onboarding_shown')) {
+                    Swal.fire({ title: 'Eğitmen Paneline Hoş Geldiniz! 🎓', text: 'Sistemde henüz hiç kurs oluşturmamışsınız. İlk adımınızı atın.', icon: 'info', showCancelButton: true, confirmButtonColor: '#4e73df', cancelButtonColor: '#858796', confirmButtonText: '<i class="fas fa-plus"></i> Hemen Kurs Oluştur', cancelButtonText: 'Daha Sonra', background: isDarkMode ? '#26262a' : '#ffffff', color: isDarkMode ? '#e0e0e0' : '#545454', allowOutsideClick: false })
+                    .then((result) => { localStorage.setItem('teacher_onboarding_shown', 'true'); if (result.isConfirmed) { window.location.href = "/Courses"; } });
+                }
+            } else if (role === "Student" && data.myEnrolledCoursesCount === 0) {
+                if (!localStorage.getItem('student_onboarding_shown')) {
+                    Swal.fire({ title: 'Eğitim Yolculuğunuz Başlıyor! 🚀', text: 'Görünen o ki henüz hiçbir kursa kayıtlı değilsin. Hadi hemen keşfet.', icon: 'success', showCancelButton: true, confirmButtonColor: '#1cc88a', cancelButtonColor: '#858796', confirmButtonText: '<i class="fas fa-search"></i> Kursları Keşfet', cancelButtonText: 'Paneli İncele', background: isDarkMode ? '#26262a' : '#ffffff', color: isDarkMode ? '#e0e0e0' : '#545454', allowOutsideClick: false })
+                    .then((result) => { localStorage.setItem('student_onboarding_shown', 'true'); if (result.isConfirmed) { window.location.href = "/Courses"; } });
+                }
+            }
         }
     </script>
 }

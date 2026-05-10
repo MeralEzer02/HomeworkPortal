@@ -7,6 +7,8 @@ using HomeworkPortal.API.Repositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using HomeworkPortal.API.Services;
+using MediatR;
+using HomeworkPortal.API.Events;
 
 namespace HomeworkPortal.API.Services
 {
@@ -16,36 +18,26 @@ namespace HomeworkPortal.API.Services
         private readonly IMapper _mapper;
         private readonly ICurrentUserService _currentUserService;
         private readonly UserManager<AppUser> _userManager;
-        private readonly INotificationService _notificationService;
         private readonly IFileService _fileService;
         private readonly ILogger<SubmissionService> _logger;
-
-        private readonly IActionLogService _actionLogService;
-        private readonly IProgressUpdateQueue _progressQueue;
-        private readonly IBadgeService _badgeService;
+        private readonly IMediator _mediator;
 
         public SubmissionService(
             IUnitOfWork unitOfWork,
             IMapper mapper,
             ICurrentUserService currentUserService,
             UserManager<AppUser> userManager,
-            INotificationService notificationService,
             IFileService fileService,
             ILogger<SubmissionService> logger,
-            IActionLogService actionLogService,
-            IProgressUpdateQueue progressQueue,
-            IBadgeService badgeService)
+            IMediator mediator)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _currentUserService = currentUserService;
             _userManager = userManager;
-            _notificationService = notificationService;
             _fileService = fileService;
             _logger = logger;
-            _actionLogService = actionLogService;
-            _progressQueue = progressQueue;
-            _badgeService = badgeService;
+            _mediator = mediator;
         }
 
         public async Task<SubmissionReadDto> SubmitAssignmentAsync(SubmissionCreateDto dto)
@@ -95,22 +87,13 @@ namespace HomeworkPortal.API.Services
 
             _logger.LogInformation("✅ BAŞARILI: Öğrenci {StudentId}, Ödev {AssignmentId} için dosya yükledi.", studentId, dto.AssignmentId);
 
-            await _actionLogService.LogActionAsync(
-                studentId,
-                "SUBMISSION_CREATED",
-                $"'{assignment.Title}' isimli ödev için yeni bir teslim dosyası yüklendi.",
-                "Submissions",
-                submission.Id
-            );
-
-            await _progressQueue.QueueWorkItemAsync(new ProgressMessage
+            await _mediator.Publish(new SubmissionCreatedEvent
             {
-                CourseId = assignment.CourseId,
-                ActionType = "SUBMITTED",
-                StudentId = studentId
+                SubmissionId = submission.Id,
+                StudentId = studentId,
+                AssignmentTitle = assignment.Title,
+                CourseId = assignment.CourseId
             });
-
-            await _badgeService.CheckAndAwardBadgesAsync(studentId);
 
             return _mapper.Map<SubmissionReadDto>(submission);
         }
@@ -149,31 +132,15 @@ namespace HomeworkPortal.API.Services
                 throw new Exception("Bu ödev notu siz işlem yaparken başka bir öğretmen/sekme tarafından güncellenmiş. Lütfen sayfayı yenileyip tekrar deneyin.", ex);
             }
 
-            try
+            await _mediator.Publish(new SubmissionGradedEvent
             {
-                await _notificationService.CreateNotificationAsync(
-                    submission.StudentId,
-                    $"{submission.Assignment.Course.Name} dersindeki '{submission.Assignment.Title}' ödeviniz notlandırıldı. Notunuz: {dto.Grade}"
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ HATA YUTULDU: Not verildi ama {StudentId} ID'li öğrenciye bildirim atılamadı!", submission.StudentId);
-            }
-
-            await _actionLogService.LogActionAsync(
-                _currentUserService.UserId,
-                "SUBMISSION_GRADED",
-                $"Bir öğrenci teslimi notlandırıldı. Verilen Not: {dto.Grade}",
-                "Submissions",
-                submission.Id
-            );
-
-            await _progressQueue.QueueWorkItemAsync(new ProgressMessage
-            {
-                CourseId = submission.Assignment.CourseId,
-                ActionType = "GRADED",
-                StudentId = submission.StudentId
+                SubmissionId = submission.Id,
+                StudentId = submission.StudentId,
+                CourseName = submission.Assignment.Course.Name,
+                AssignmentTitle = submission.Assignment.Title,
+                Grade = dto.Grade,
+                TeacherId = _currentUserService.UserId,
+                CourseId = submission.Assignment.CourseId
             });
         }
 

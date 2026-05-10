@@ -40,12 +40,32 @@ namespace HomeworkPortal.API.Controllers
                 .Include(a => a.Course)
                 .ToListAsync();
 
+            var totalSubmissions = await _context.Submissions.CountAsync(s => !s.IsDeleted);
+            var gradedSubmissions = await _context.Submissions.CountAsync(s => !s.IsDeleted && s.IsGraded);
+            var pendingSubmissions = totalSubmissions - gradedSubmissions;
+
+            var courseSubmissionStats = await _context.Courses
+                .Select(c => new CourseSubmissionCountDto
+                {
+                    CourseName = c.Name,
+                    SubmissionCount = c.Assignments.SelectMany(a => a.Submissions).Count(s => !s.IsDeleted)
+                })
+                .Where(x => x.SubmissionCount > 0)
+                .OrderByDescending(x => x.SubmissionCount)
+                .Take(5)
+                .ToListAsync();
+
             var dto = new DashboardDto
             {
                 TotalStudents = students.Count,
                 TotalTeachers = teachers.Count,
                 TotalCourses = allCourses.Count,
                 TotalAssignments = allAssignments.Count,
+
+                GradedSubmissions = gradedSubmissions,
+                PendingSubmissions = pendingSubmissions,
+
+                CourseSubmissionStats = courseSubmissionStats,
 
                 ActiveAssignments = allAssignments
                     .Where(a => a.DueDate >= now && a.DueDate <= fiveDaysLater)
@@ -97,12 +117,36 @@ namespace HomeworkPortal.API.Controllers
                 .Where(a => a.Course.TeacherId == userId)
                 .ToListAsync();
 
+            var mySubmissions = await _context.Submissions
+                .Include(s => s.Assignment).ThenInclude(a => a.Course)
+                .Where(s => s.Assignment.Course.TeacherId == userId && !s.IsDeleted)
+                .ToListAsync();
+
+            var gradedSubmissions = mySubmissions.Count(s => s.IsGraded);
+            var pendingSubmissions = mySubmissions.Count - gradedSubmissions;
+
+            var courseSubmissionStats = await _context.Courses
+                .Where(c => c.TeacherId == userId)
+                .Select(c => new CourseSubmissionCountDto
+                {
+                    CourseName = c.Name,
+                    SubmissionCount = c.Assignments.SelectMany(a => a.Submissions).Count(s => !s.IsDeleted)
+                })
+                .Where(x => x.SubmissionCount > 0)
+                .OrderByDescending(x => x.SubmissionCount)
+                .Take(5)
+                .ToListAsync();
+
             var dto = new TeacherDashboardDto
             {
                 MyTotalStudents = uniqueStudentCount,
                 MyTotalCourses = myCourses.Count,
                 MyTotalAssignments = myAssignments.Count,
-                PendingSubmissions = 0,
+
+                GradedSubmissions = gradedSubmissions,
+                PendingSubmissions = pendingSubmissions,
+
+                CourseSubmissionStats = courseSubmissionStats,
 
                 ActiveAssignments = myAssignments
                     .Where(a => a.DueDate >= now && a.DueDate <= fiveDaysLater)

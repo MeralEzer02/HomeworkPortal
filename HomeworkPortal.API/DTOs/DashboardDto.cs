@@ -11,6 +11,10 @@
         public List<AssignmentSummaryDto> ActiveAssignments { get; set; } = new();
         public List<AssignmentSummaryDto> ExpiredAssignments { get; set; } = new();
         public List<CourseSummaryDto> RecentCourses { get; set; } = new();
+        public int GradedSubmissions { get; set; }
+        public int PendingSubmissions { get; set; }
+
+        public List<CourseSubmissionCountDto> CourseSubmissionStats { get; set; } = new();
     }
 
     // Öğretmen için ana DTO
@@ -23,6 +27,9 @@
         public List<AssignmentSummaryDto> ActiveAssignments { get; set; } = new();
         public List<AssignmentSummaryDto> ExpiredAssignments { get; set; } = new();
         public List<CourseSummaryDto> RecentCourses { get; set; } = new();
+        public int GradedSubmissions { get; set; }
+
+        public List<CourseSubmissionCountDto> CourseSubmissionStats { get; set; } = new();
     }
 
     // Öğrenci için ana DTO
@@ -32,6 +39,12 @@
         public int PendingAssignmentsCount { get; set; }
         public List<AssignmentSummaryDto> UpcomingAssignments { get; set; } = new();
         public List<CourseSummaryDto> MyCourses { get; set; } = new();
+    }
+
+    public class CourseSubmissionCountDto
+    {
+        public string CourseName { get; set; } = string.Empty;
+        public int SubmissionCount { get; set; }
     }
 
     // Ödev özet bilgileri

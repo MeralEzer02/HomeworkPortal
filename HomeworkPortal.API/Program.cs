@@ -113,6 +113,9 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// MediatR Kaydı (Event-Driven Mimari İçin)
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+
 // AutoMapper Kaydı
 builder.Services.AddAutoMapper(cfg =>
 {
