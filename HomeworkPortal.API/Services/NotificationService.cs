@@ -4,7 +4,9 @@ using Microsoft.Extensions.Logging;
 using HomeworkPortal.API.DTOs;
 using HomeworkPortal.API.Models;
 using HomeworkPortal.API.Repositories;
-using HomeworkPortal.API.Helpers; // RetryHelper'ı kullanmak için eklendi
+using HomeworkPortal.API.Helpers;
+using Microsoft.AspNetCore.SignalR;
+using HomeworkPortal.API.Hubs;
 
 namespace HomeworkPortal.API.Services
 {
@@ -12,15 +14,19 @@ namespace HomeworkPortal.API.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        // 1. Zırh için Logger ekliyoruz
         private readonly ILogger<NotificationService> _logger;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        // Constructor'a ILogger'ı dahil ediyoruz
-        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, ILogger<NotificationService> logger)
+        public NotificationService(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            ILogger<NotificationService> logger,
+            IHubContext<NotificationHub> hubContext)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
         public async Task CreateNotificationAsync(string userId, string message)
@@ -32,15 +38,15 @@ namespace HomeworkPortal.API.Services
                 IsRead = false
             };
 
-            // 2. Polly Zırhını oluşturuyoruz
             var retryPolicy = RetryHelper.CreateRetryPolicy(_logger);
 
-            // 3. Veritabanı işlemini zırhın içinde (ExecuteAsync) çalıştırıyoruz
             await retryPolicy.ExecuteAsync(async () =>
             {
                 await _unitOfWork.Notifications.AddAsync(notification);
                 await _unitOfWork.CompleteAsync();
             });
+
+            await _hubContext.Clients.User(userId).SendAsync("ReceiveNotification", message);
         }
 
         public async Task CreateNotificationsAsync(IEnumerable<string> userIds, string message)
@@ -56,15 +62,12 @@ namespace HomeworkPortal.API.Services
             }).ToList();
 
             const int chunkSize = 100;
-
-            // Polly
             var retryPolicy = RetryHelper.CreateRetryPolicy(_logger);
 
             for (int i = 0; i < notifications.Count; i += chunkSize)
             {
                 var chunk = notifications.Skip(i).Take(chunkSize);
 
-                // Toplu kaydetme işlemi
                 await retryPolicy.ExecuteAsync(async () =>
                 {
                     foreach (var notif in chunk)
@@ -73,6 +76,11 @@ namespace HomeworkPortal.API.Services
                     }
                     await _unitOfWork.CompleteAsync();
                 });
+
+                foreach (var notif in chunk)
+                {
+                    await _hubContext.Clients.User(notif.UserId).SendAsync("ReceiveNotification", notif.Message);
+                }
             }
         }
 

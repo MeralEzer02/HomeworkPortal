@@ -23,11 +23,13 @@ namespace HomeworkPortal.API.Controllers
         public async Task<IActionResult> GetUserNotifications([FromQuery] PaginationParams paginationParams)
         {
             var userId = _currentUserService.UserId;
-            var result = await _notificationService.GetUserNotificationsAsync(userId!, paginationParams);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var result = await _notificationService.GetUserNotificationsAsync(userId, paginationParams);
             return Ok(result);
         }
 
-        [HttpPost("{id}/read")]
+        [HttpPut("{id}/read")]
         public async Task<IActionResult> MarkAsRead(int id)
         {
             await _notificationService.MarkAsReadAsync(id);

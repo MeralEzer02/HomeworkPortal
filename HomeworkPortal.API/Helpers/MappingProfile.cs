@@ -29,13 +29,14 @@ namespace HomeworkPortal.API.Helpers
             // Teslimat (Submission) Mapping
             CreateMap<Submission, SubmissionReadDto>()
                 .ForMember(dest => dest.AssignmentTitle, opt => opt.MapFrom(src => src.Assignment.Title))
+                .ForMember(dest => dest.CourseName, opt => opt.MapFrom(src => src.Assignment.Course.Name)) // <-- EKSİK OLAN KÖPRÜ KURULDU
                 .ForMember(dest => dest.StudentFullName, opt => opt.MapFrom(src => src.Student.FullName));
+
             CreateMap<SubmissionCreateDto, Submission>();
             CreateMap<SubmissionGradeDto, Submission>();
 
             // Bildirim (Notification) Mapping
             CreateMap<Notification, NotificationReadDto>();
-            CreateMap<NotificationUpdateDto, Notification>();
         }
     }
 }

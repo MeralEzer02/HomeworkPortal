@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using HomeworkPortal.API.DTOs;
+﻿using HomeworkPortal.API.DTOs;
 using HomeworkPortal.API.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace HomeworkPortal.API.Controllers
 {
@@ -64,6 +66,25 @@ namespace HomeworkPortal.API.Controllers
         {
             await _assignmentService.DeleteAssignmentAsync(id);
             return Ok(new { message = "Ödev başarıyla silindi." });
+        }
+
+        [HttpGet("for-upload")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> GetAssignmentsForUpload([FromServices] HomeworkPortal.API.Data.AppDbContext context)
+        {
+            var userId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+
+            var assignments = await context.Assignments
+                .Include(a => a.Course)
+                .Where(a => a.Course.Students.Any(s => s.Id == userId) && !a.IsDeleted)
+                .Select(a => new {
+                    id = a.Id,
+                    title = a.Title,
+                    courseName = a.Course.Name
+                })
+                .ToListAsync();
+
+            return Ok(assignments);
         }
     }
 }

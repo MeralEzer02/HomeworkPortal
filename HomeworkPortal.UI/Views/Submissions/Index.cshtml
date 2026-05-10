@@ -10,7 +10,7 @@
 
     @if (role == "Student")
     {
-        <button class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm" id="btnOpenUploadModal" style="display:none !important;">
+        <button class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm" id="btnOpenUploadModal">
             <i class="fas fa-upload fa-sm text-white-50 mr-2"></i> Ödev Yükle
         </button>
     }
@@ -86,6 +86,42 @@
     </div>
 </div>
 
+@* Öğrenci Ödev Yükleme Modalı *@
+@if (role == "Student")
+{
+    <div class="modal fade" id="uploadModal" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white border-0">
+                    <h5 class="modal-title font-weight-bold"><i class="fas fa-file-upload mr-2"></i>Ödev Yükle</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body bg-light p-4">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label class="font-weight-bold text-dark">Hangi Ödevi Teslim Ediyorsunuz?</label>
+                            <select id="uploadAssignmentId" class="form-control font-weight-bold" required>
+                                <option value="">Ödevler Yükleniyor...</option>
+                            </select>
+                        </div>
+                        <div class="form-group mt-3">
+                            <label class="font-weight-bold text-dark">Dosya Seçin</label>
+                            <input type="file" id="uploadFile" class="form-control-file p-2 border rounded bg-white" required>
+                        </div>
+                        <div class="form-group mt-3">
+                            <label class="font-weight-bold text-dark">Açıklama / Öğretmene Not (Opsiyonel)</label>
+                            <textarea id="uploadNote" class="form-control" rows="2" placeholder="Varsa iletmek istediğiniz notlar..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-block font-weight-bold btn-lg mt-4 shadow-sm" id="btnUploadSubmit">
+                            <i class="fas fa-paper-plane mr-2"></i> Yükle ve Teslim Et
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @* Notlandırma Modalı (Öğretmen/Admin İçin) *@
 @if (role == "Teacher" || role == "Admin")
 {
@@ -143,26 +179,110 @@
         const USER_ROLE = "@role";
 
         let currentPage = 1;
-        const pageSize = 50; // Tek seferde çok veri gelsin
+        const pageSize = 50;
         let globalSubmissions = [];
 
         $(document).ready(function () {
             moment.locale('tr');
 
-            // 1. Sayfa açılır açılmaz hem dersleri hem de BÜTÜN teslimleri çek
             loadFilterCourses();
             loadSubmissions(1);
 
-            // Filtre elemanlarına olay dinleyicileri ekle
             $("#searchInput").on("keyup", applyFiltersAndRender);
             $("#sortDropdown, #filterCourse, #filterStatus").on("change", applyFiltersAndRender);
 
             if (USER_ROLE === "Teacher" || USER_ROLE === "Admin") {
                 handleGradeForm();
             }
+
+            // Öğrenci Yönlendirme ve Yükleme İşlemleri
+            if (USER_ROLE === "Student") {
+                const urlParams = new URLSearchParams(window.location.search);
+                const targetAssignmentId = urlParams.get('assignmentId');
+
+                if (targetAssignmentId) {
+                    loadAssignmentsForUpload(targetAssignmentId);
+                    $("#uploadModal").modal("show");
+                }
+
+                $("#btnOpenUploadModal").click(function() {
+                    loadAssignmentsForUpload();
+                    $("#uploadModal").modal("show");
+                });
+
+                handleUploadForm();
+            }
         });
 
-        // 🎯 YENİ: Filtre için ders listesini doldurur
+        // PreSelectId parametresi ile otomatik ödev seçimi
+        function loadAssignmentsForUpload(preSelectId = null) {
+            $.ajax({
+                url: `${API_BASE}/Assignments/for-upload`,
+                method: "GET",
+                success: function(res) {
+                    let html = '<option value="">Lütfen listeden seçiniz...</option>';
+                    const data = res.data || res;
+                    data.forEach(a => {
+                        html += `<option value="${a.id}">${a.courseName} - ${a.title}</option>`;
+                    });
+                    $("#uploadAssignmentId").html(html);
+
+                    if(preSelectId) {
+                        $("#uploadAssignmentId").val(preSelectId);
+                    }
+                },
+                error: function() {
+                    $("#uploadAssignmentId").html('<option value="">Ödevler yüklenirken hata oluştu!</option>');
+                }
+            });
+        }
+
+        // Dosya Posta İşlemi
+        function handleUploadForm() {
+            $("#uploadForm").on("submit", function (e) {
+                e.preventDefault();
+                let fileInput = $("#uploadFile")[0].files[0];
+                let assignmentId = $("#uploadAssignmentId").val();
+                let studentNote = $("#uploadNote").val();
+
+                if (!fileInput || !assignmentId) return;
+
+                let formData = new FormData();
+                formData.append("AssignmentId", assignmentId);
+                formData.append("File", fileInput);
+                if (studentNote) formData.append("StudentNote", studentNote);
+
+                let btn = $("#btnUploadSubmit");
+                btn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Yükleniyor...');
+
+                $.ajax({
+                    url: `${API_BASE}/Submissions`,
+                    method: "POST",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function () {
+                        $("#uploadModal").modal("hide");
+                        Swal.fire('Başarılı', 'Ödeviniz başarıyla teslim edildi!', 'success');
+
+                        window.history.replaceState(null, null, window.location.pathname);
+
+                        loadSubmissions(1);
+                        $("#uploadForm")[0].reset();
+                    },
+                    error: function (err) {
+                        let msg = "Yükleme sırasında hata oluştu.";
+                        if (err.responseJSON && err.responseJSON.message) msg = err.responseJSON.message;
+                        Swal.fire('Hata', msg, 'error');
+                    },
+                    complete: function () {
+                        btn.prop("disabled", false).html('<i class="fas fa-paper-plane mr-2"></i> Yükle ve Teslim Et');
+                    }
+                });
+            });
+        }
+
+        // Filtre için ders listesini doldurur
         function loadFilterCourses() {
             $.ajax({
                 url: `${API_BASE}/Courses?pageNumber=1&pageSize=100`,
@@ -206,13 +326,11 @@
         function applyFiltersAndRender() {
             let filtered = [...globalSubmissions];
 
-            // 1. Ders Filtresi
             const selectedCourse = $("#filterCourse").val();
             if (selectedCourse) {
                 filtered = filtered.filter(s => s.courseName === selectedCourse);
             }
 
-            // 2. Durum Filtresi (Not Bekleyenler vs)
             const selectedStatus = $("#filterStatus").val();
             if (selectedStatus === "pending") {
                 filtered = filtered.filter(s => s.grade === null || s.grade === undefined);
@@ -220,7 +338,6 @@
                 filtered = filtered.filter(s => s.grade !== null && s.grade !== undefined);
             }
 
-            // 3. Metin Arama
             const searchText = $("#searchInput").val().toLowerCase();
             if (searchText) {
                 filtered = filtered.filter(s =>
@@ -230,10 +347,9 @@
                 );
             }
 
-            // 4. Sıralama
             const sortBy = $("#sortDropdown").val();
-            if (sortBy === "date_desc") filtered.sort((a, b) => new Date(b.submissionDate) - new Date(a.submissionDate));
-            else if (sortBy === "date_asc") filtered.sort((a, b) => new Date(a.submissionDate) - new Date(b.submissionDate));
+            if (sortBy === "date_desc") filtered.sort((a, b) => new Date(b.submissionDate || b.submittedAt) - new Date(a.submissionDate || a.submittedAt));
+            else if (sortBy === "date_asc") filtered.sort((a, b) => new Date(a.submissionDate || a.submittedAt) - new Date(b.submissionDate || b.submittedAt));
 
             renderTable(filtered);
         }
@@ -246,7 +362,7 @@
 
             let html = "";
             data.forEach(item => {
-                const dateText = moment(item.submissionDate || item.submittedAt).format('DD.MM.YYYY HH:mm');
+                const dateText = moment.utc(item.submissionDate || item.submittedAt).local().format('DD.MM.YYYY HH:mm');
                 const fileLink = item.filePath
                     ? `<a href="https://localhost:7113/${item.filePath}" target="_blank" class="btn btn-sm btn-outline-info shadow-sm"><i class="fas fa-download mr-1"></i>İndir</a>`
                     : '-';

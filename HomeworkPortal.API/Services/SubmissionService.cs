@@ -22,7 +22,7 @@ namespace HomeworkPortal.API.Services
 
         private readonly IActionLogService _actionLogService;
         private readonly IProgressUpdateQueue _progressQueue;
-        private readonly IBadgeService _badgeService; // 🎯 YENİ EKLENEN BAĞIMLILIK
+        private readonly IBadgeService _badgeService;
 
         public SubmissionService(
             IUnitOfWork unitOfWork,
@@ -34,7 +34,7 @@ namespace HomeworkPortal.API.Services
             ILogger<SubmissionService> logger,
             IActionLogService actionLogService,
             IProgressUpdateQueue progressQueue,
-            IBadgeService badgeService) // 🎯 CONSTRUCTOR'A EKLENDİ
+            IBadgeService badgeService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -45,7 +45,7 @@ namespace HomeworkPortal.API.Services
             _logger = logger;
             _actionLogService = actionLogService;
             _progressQueue = progressQueue;
-            _badgeService = badgeService; // 🎯 ATAMA YAPILDI
+            _badgeService = badgeService;
         }
 
         public async Task<SubmissionReadDto> SubmitAssignmentAsync(SubmissionCreateDto dto)
@@ -110,7 +110,6 @@ namespace HomeworkPortal.API.Services
                 StudentId = studentId
             });
 
-            // 🎯 YENİ EKLENEN: Ödev yüklendikten sonra öğrencinin rozet kazanıp kazanmadığını kontrol et
             await _badgeService.CheckAndAwardBadgesAsync(studentId);
 
             return _mapper.Map<SubmissionReadDto>(submission);
@@ -180,10 +179,17 @@ namespace HomeworkPortal.API.Services
 
         public async Task<PagedResult<SubmissionReadDto>> GetSubmissionsByAssignmentAsync(int assignmentId, PaginationParams paginationParams)
         {
-            var query = _unitOfWork.Submissions.Where(s => s.AssignmentId == assignmentId && !s.IsDeleted);
+            var query = _unitOfWork.Submissions.Where(
+                s => s.AssignmentId == assignmentId && !s.IsDeleted,
+                s => s.Student,
+                s => s.Assignment,
+                s => s.Assignment.Course
+            );
+
             var totalCount = await query.CountAsync();
 
             var submissions = await query
+                .OrderByDescending(s => s.SubmissionDate)
                 .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
                 .Take(paginationParams.PageSize)
                 .ToListAsync();
@@ -194,10 +200,16 @@ namespace HomeworkPortal.API.Services
 
         public async Task<PagedResult<SubmissionReadDto>> GetStudentSubmissionsAsync(string studentId, PaginationParams paginationParams)
         {
-            var query = _unitOfWork.Submissions.Where(s => s.StudentId == studentId && !s.IsDeleted);
+            var query = _unitOfWork.Submissions.Where(
+                s => s.StudentId == studentId && !s.IsDeleted,
+                s => s.Assignment,
+                s => s.Assignment.Course
+            );
+
             var totalCount = await query.CountAsync();
 
             var submissions = await query
+                .OrderByDescending(s => s.SubmissionDate)
                 .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
                 .Take(paginationParams.PageSize)
                 .ToListAsync();

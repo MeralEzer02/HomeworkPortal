@@ -148,9 +148,16 @@ namespace HomeworkPortal.API.Controllers
 
             var courseIds = myCourses.Select(c => c.Id).ToList();
 
-            var upcomingAssignments = await _context.Assignments
+            var pendingQuery = _context.Assignments
                 .Include(a => a.Course)
-                .Where(a => courseIds.Contains(a.CourseId) && a.DueDate >= now && !a.IsDeleted)
+                .Where(a => courseIds.Contains(a.CourseId) &&
+                            a.DueDate >= now &&
+                            !a.IsDeleted &&
+                            !a.Submissions.Any(s => s.StudentId == userId && !s.IsDeleted));
+
+            var pendingAssignmentsCount = await pendingQuery.CountAsync();
+
+            var upcomingAssignments = await pendingQuery
                 .OrderBy(a => a.DueDate)
                 .Take(5)
                 .ToListAsync();
@@ -158,7 +165,7 @@ namespace HomeworkPortal.API.Controllers
             var dto = new StudentDashboardDto
             {
                 MyEnrolledCoursesCount = myCourses.Count,
-                PendingAssignmentsCount = upcomingAssignments.Count,
+                PendingAssignmentsCount = pendingAssignmentsCount,
                 MyCourses = myCourses.Select(c => new CourseSummaryDto
                 {
                     Id = c.Id,

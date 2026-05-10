@@ -9,7 +9,11 @@
         public double? Grade { get; set; }
         public int AssignmentId { get; set; }
         public string AssignmentTitle { get; set; }
+
+        public string CourseName { get; set; }
         public string StudentId { get; set; }
         public string StudentFullName { get; set; }
+        public string? StudentNote { get; set; }
+        public string? Feedback { get; set; }
     }
 }

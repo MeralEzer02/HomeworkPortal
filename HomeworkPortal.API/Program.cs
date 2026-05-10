@@ -24,6 +24,8 @@ builder.Host.UseSerilog((context, loggerConfig) =>
 // Add services to the container.
 builder.Services.AddControllers();
 
+builder.Services.AddSignalR();
+
 builder.Services.AddScoped<HomeworkPortal.API.Services.IActionLogService, HomeworkPortal.API.Services.ActionLogService>();
 
 // CORS AYARI
@@ -92,6 +94,22 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
         ValidAudience = builder.Configuration["JwtSettings:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"] ?? ""))
+    };
+
+    // SignalR (WebSockets) için Token'ı URL (Query String) üzerinden okuma
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/notificationHub"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -214,6 +232,7 @@ app.UseRouting();
 app.UseCors("AllowMyUI");
 
 app.UseAuthentication();
+
 app.UseAuthorization();
 
 app.UseRateLimiter();
@@ -221,6 +240,8 @@ app.UseRateLimiter();
 app.UseHttpMetrics();
 
 app.MapControllers().RequireRateLimiting("api");
+
+app.MapHub<HomeworkPortal.API.Hubs.NotificationHub>("/notificationHub");
 
 app.MapMetrics();
 
