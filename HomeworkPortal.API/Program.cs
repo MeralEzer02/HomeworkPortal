@@ -195,8 +195,27 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await HomeworkPortal.API.Data.DbSeeder.SeedBadgesAsync(context);
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        var userManager = services.GetRequiredService<UserManager<AppUser>>();
+        var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
+
+        await context.Database.MigrateAsync();
+
+        await HomeworkPortal.API.Data.DbSeeder.SeedDataAsync(userManager, roleManager);
+
+        await HomeworkPortal.API.Data.DbSeeder.SeedBadgesAsync(context);
+
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogInformation("🚀 MÜKEMMEL! Veritabanı başarıyla tohumlandı (Seeded)!");
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "🚨 DİKKAT: Veritabanı Seed işlemi sırasında devasa bir hata oluştu!");
+    }
 }
 
 if (app.Environment.IsDevelopment())

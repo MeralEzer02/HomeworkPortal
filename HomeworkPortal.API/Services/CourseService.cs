@@ -14,14 +14,16 @@ namespace HomeworkPortal.API.Services
         private readonly ICurrentUserService _currentUserService;
         private readonly UserManager<AppUser> _userManager;
         private readonly INotificationService _notificationService;
+        private readonly IActionLogService _actionLogService;
 
-        public CourseService(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUserService currentUserService, UserManager<AppUser> userManager, INotificationService notificationService)
+        public CourseService(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUserService currentUserService, UserManager<AppUser> userManager, INotificationService notificationService, IActionLogService actionLogService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _currentUserService = currentUserService;
             _userManager = userManager;
             _notificationService = notificationService;
+            _actionLogService = actionLogService;
         }
 
         public async Task<CourseReadDto> CreateCourseAsync(CourseCreateDto dto)
@@ -32,6 +34,13 @@ namespace HomeworkPortal.API.Services
             await _unitOfWork.Courses.AddAsync(newCourse);
             await _unitOfWork.CompleteAsync();
 
+            await _actionLogService.LogActionAsync(
+                _currentUserService.UserId,
+                "CREATE_COURSE",
+                $"'{newCourse.Name}' adlı yeni kurs oluşturuldu.",
+                "Course",
+                newCourse.Id);
+
             return _mapper.Map<CourseReadDto>(newCourse);
         }
 
@@ -40,7 +49,6 @@ namespace HomeworkPortal.API.Services
             var course = await _unitOfWork.Courses.GetByIdAsync(id);
             if (course == null) throw new Exception("Ders bulunamadı.");
 
-            // 👑 ADMIN KONTROLÜ
             var user = await _userManager.FindByIdAsync(_currentUserService.UserId);
             var isAdmin = user != null && await _userManager.IsInRoleAsync(user, "Admin");
 
@@ -49,6 +57,13 @@ namespace HomeworkPortal.API.Services
 
             _mapper.Map(dto, course);
             await _unitOfWork.CompleteAsync();
+
+            await _actionLogService.LogActionAsync(
+                _currentUserService.UserId,
+                "UPDATE_COURSE",
+                $"'{course.Name}' adlı kurs güncellendi.",
+                "Course",
+                course.Id);
         }
 
         public async Task DeleteCourseAsync(int id)
@@ -56,7 +71,6 @@ namespace HomeworkPortal.API.Services
             var course = await _unitOfWork.Courses.GetByIdAsync(id);
             if (course == null) throw new Exception("Ders bulunamadı.");
 
-            // 👑 ADMIN KONTROLÜ
             var user = await _userManager.FindByIdAsync(_currentUserService.UserId);
             var isAdmin = user != null && await _userManager.IsInRoleAsync(user, "Admin");
 
@@ -65,6 +79,13 @@ namespace HomeworkPortal.API.Services
 
             course.IsDeleted = true;
             await _unitOfWork.CompleteAsync();
+
+            await _actionLogService.LogActionAsync(
+                _currentUserService.UserId,
+                "DELETE_COURSE",
+                $"'{course.Name}' adlı kurs sistemden silindi.",
+                "Course",
+                course.Id);
         }
 
         public async Task<PagedResult<CourseReadDto>> GetCoursesAsync(PaginationParams paginationParams)
@@ -74,14 +95,12 @@ namespace HomeworkPortal.API.Services
             var isAdmin = user != null && await _userManager.IsInRoleAsync(user, "Admin");
             var isTeacher = user != null && await _userManager.IsInRoleAsync(user, "Teacher");
 
-            var query = _unitOfWork.Courses.GetAll(c => c.Teacher).AsQueryable();
+            var query = _unitOfWork.Courses.GetAll(c => c.Teacher, c => c.Category).AsQueryable();
 
-            // 🚀 İŞTE DÜZELTİLEN YER: Eğer öğretmense ve Admin değilse, SADECE kendi derslerini görecek!
             if (isTeacher && !isAdmin)
             {
                 query = query.Where(c => c.TeacherId == userId);
             }
-            // Not: Öğrenciler derslere "Kayıt Ol" diyebilsinler diye onlara tüm listeyi açık bırakıyoruz.
 
             var totalCount = await query.CountAsync();
 
@@ -97,7 +116,7 @@ namespace HomeworkPortal.API.Services
 
         public async Task<CourseReadDto> GetCourseDetailsAsync(int id)
         {
-            var course = await _unitOfWork.Courses.Where(c => c.Id == id, c => c.Teacher).FirstOrDefaultAsync();
+            var course = await _unitOfWork.Courses.Where(c => c.Id == id, c => c.Teacher, c => c.Category).FirstOrDefaultAsync();
             return _mapper.Map<CourseReadDto>(course);
         }
 
@@ -113,8 +132,14 @@ namespace HomeworkPortal.API.Services
                 throw new Exception("Bu derse zaten kayıtlısınız.");
 
             course.Students.Add(student);
-
             await _unitOfWork.CompleteAsync();
+
+            await _actionLogService.LogActionAsync(
+                studentId,
+                "ENROLL_COURSE",
+                $"'{course.Name}' adlı kursa kayıt olundu.",
+                "Course",
+                course.Id);
 
             try
             {
@@ -135,6 +160,13 @@ namespace HomeworkPortal.API.Services
 
             course.TeacherId = teacherId;
             await _unitOfWork.CompleteAsync();
+
+            await _actionLogService.LogActionAsync(
+                _currentUserService.UserId,
+                "ASSIGN_TEACHER",
+                $"'{course.Name}' kursuna yeni öğretmen atandı.",
+                "Course",
+                course.Id);
         }
 
         public async Task<IEnumerable<UserReadDto>> GetEnrolledStudentsAsync(int courseId)

@@ -46,7 +46,13 @@
 <div class="card shadow mb-4 border-left-primary">
     <div class="card-body py-3">
         <div class="row">
-            <div class="col-md-6 mb-2 mb-md-0">
+            <div class="col-md-4 mb-2 mb-md-0">
+                <label class="small font-weight-bold text-primary"><i class="fas fa-filter mr-1"></i>Kategori</label>
+                <select id="filterCategoryDropdown" class="form-control form-control-sm">
+                    <option value="">Tüm Kategoriler</option>
+                </select>
+            </div>
+            <div class="col-md-4 mb-2 mb-md-0">
                 <label class="small font-weight-bold text-primary"><i class="fas fa-sort mr-1"></i>Sıralama</label>
                 <select id="sortDropdown" class="form-control form-control-sm">
                     <option value="date_desc">En Yeni Eklenenler (Önce)</option>
@@ -54,9 +60,9 @@
                     <option value="name_asc">Kurs Adı (A-Z)</option>
                 </select>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label class="small font-weight-bold text-primary"><i class="fas fa-search mr-1"></i>Arama</label>
-                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Mevcut sayfada kurs adında veya açıklamasında ara...">
+                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Arama...">
             </div>
         </div>
     </div>
@@ -69,6 +75,7 @@
                 <thead class="thead-dark">
                     <tr>
                         <th>Kurs Adı</th>
+                        <th>Kategori</th>
                         <th>Açıklama</th>
                         <th>Öğretmen</th>
                         <th>Tarih</th>
@@ -80,7 +87,6 @@
             </table>
         </div>
 
-        <!-- Sayfalama (Pagination) Alt Yapısı -->
         <div class="d-flex justify-content-between align-items-center mt-3 px-2">
             <div id="pageInfo" class="small font-weight-bold text-muted"></div>
             <nav aria-label="Page navigation">
@@ -96,11 +102,17 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Kurs Bilgileri</h5>
+                <h5 class="modal-title">Yeni Kurs Oluştur</h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
             </div>
             <div class="modal-body">
                 <form id="courseForm">
+                    <div class="form-group">
+                        <label class="font-weight-bold">Kategori</label>
+                        <select class="form-control" id="courseCategory" required>
+                            <option value="">Kategori Seçin...</option>
+                        </select>
+                    </div>
                     <div class="form-group"><label class="font-weight-bold">Kurs Adı</label><input type="text" id="courseName" class="form-control" required></div>
                     <div class="form-group"><label class="font-weight-bold">Açıklama</label><textarea id="courseDesc" class="form-control" rows="3" required></textarea></div>
                     <button type="submit" class="btn btn-primary btn-block" id="btnSave">Kaydet</button>
@@ -122,6 +134,12 @@
                 <form id="editCourseForm">
                     <input type="hidden" id="editCourseId">
                     <input type="hidden" id="editCourseRowVersion">
+                    <div class="form-group">
+                        <label class="font-weight-bold">Kategori</label>
+                        <select class="form-control" id="editCourseCategory" required>
+                            <option value="">Kategori Seçin...</option>
+                        </select>
+                    </div>
                     <div class="form-group"><label class="font-weight-bold">Kurs Adı</label><input type="text" id="editCourseName" class="form-control" required></div>
                     <div class="form-group"><label class="font-weight-bold">Açıklama</label><textarea id="editCourseDesc" class="form-control" rows="3" required></textarea></div>
                     <button type="submit" class="btn btn-warning btn-block font-weight-bold" id="btnUpdate">Güncelle</button>
@@ -136,6 +154,7 @@
 
     <script>
         const API_BASE = "https://localhost:7113/api/Courses";
+        const CAT_API_BASE = "https://localhost:7113/api/Categories";
         const USER_ROLE = "@role";
 
         let globalAllCourses = [];
@@ -146,10 +165,12 @@
         const pageSize = 10;
 
         $(document).ready(function () {
+            loadCategories();
             loadCourses(currentPage);
 
             $("#searchInput").on("keyup", applyFiltersAndRender);
             $("#sortDropdown").on("change", applyFiltersAndRender);
+            $("#filterCategoryDropdown").on("change", applyFiltersAndRender);
 
             $('.nav-link').on('click', function() {
                 $('.nav-link').removeClass('text-primary').addClass('text-secondary');
@@ -160,7 +181,11 @@
                 e.preventDefault();
                 $.ajax({
                     url: API_BASE, method: "POST", contentType: "application/json",
-                    data: JSON.stringify({ name: $("#courseName").val(), description: $("#courseDesc").val() }),
+                    data: JSON.stringify({
+                        name: $("#courseName").val(),
+                        description: $("#courseDesc").val(),
+                        categoryId: parseInt($("#courseCategory").val())
+                    }),
                     beforeSend: function () { $("#btnSave").prop("disabled", true).text("İşleniyor..."); },
                     success: function () {
                         $("#courseModal").modal("hide");
@@ -178,7 +203,13 @@
                 const id = $("#editCourseId").val();
                 $.ajax({
                     url: `${API_BASE}/${id}`, method: "PUT", contentType: "application/json",
-                    data: JSON.stringify({ id: parseInt(id), name: $("#editCourseName").val(), description: $("#editCourseDesc").val(), rowVersion: $("#editCourseRowVersion").val() }),
+                    data: JSON.stringify({
+                        id: parseInt(id),
+                        name: $("#editCourseName").val(),
+                        description: $("#editCourseDesc").val(),
+                        categoryId: parseInt($("#editCourseCategory").val()),
+                        rowVersion: $("#editCourseRowVersion").val()
+                    }),
                     beforeSend: function () { $("#btnUpdate").prop("disabled", true).text("Güncelleniyor..."); },
                     success: function () {
                         $("#editCourseModal").modal("hide");
@@ -191,22 +222,38 @@
             });
         });
 
+        function loadCategories() {
+            $.ajax({
+                url: CAT_API_BASE,
+                method: "GET",
+                success: function (data) {
+                    let html = '<option value="">Tüm Kategoriler / Seçin...</option>';
+                    data.forEach(c => {
+                        html += `<option value="${c.id}">${c.name}</option>`;
+                    });
+                    $("#filterCategoryDropdown").html(html);
+                    $("#courseCategory").html(html);
+                    $("#editCourseCategory").html(html);
+                }
+            });
+        }
+
         function switchTab(tabName) {
             CURRENT_TAB = tabName;
             $("#searchInput").val('');
+            $("#filterCategoryDropdown").val('');
             applyFiltersAndRender();
         }
 
         async function loadCourses(page = 1) {
             currentPage = page;
             try {
-                $("#courseTableBody").html('<tr><td colspan="5" class="text-center py-4"><i class="fas fa-spinner fa-spin text-primary mr-2"></i> Kurslar Yükleniyor...</td></tr>');
+                $("#courseTableBody").html('<tr><td colspan="6" class="text-center py-4"><i class="fas fa-spinner fa-spin text-primary mr-2"></i> Kurslar Yükleniyor...</td></tr>');
                 $("#courseTableBody").css("opacity", "0.5");
 
                 const res = await $.ajax({ url: `${API_BASE}?pageNumber=${page}&pageSize=${pageSize}`, method: "GET" });
 
                 const allData = res.data || [];
-
                 globalAllCourses = allData;
 
                 if(USER_ROLE === "Student") {
@@ -226,9 +273,19 @@
             let baseData = CURRENT_TAB === "MY_COURSES" ? globalMyCourses : globalAllCourses;
             let filtered = [...baseData];
 
+            // 1. Text Search (Metin Araması)
             const searchText = $("#searchInput").val().toLowerCase();
-            if (searchText) filtered = filtered.filter(c => c.name.toLowerCase().includes(searchText) || c.description.toLowerCase().includes(searchText));
+            if (searchText) {
+                filtered = filtered.filter(c => c.name.toLowerCase().includes(searchText) || c.description.toLowerCase().includes(searchText));
+            }
 
+            // 2. Kategori Filtresi
+            const selectedCategoryId = $("#filterCategoryDropdown").val();
+            if (selectedCategoryId) {
+                filtered = filtered.filter(c => c.categoryId === parseInt(selectedCategoryId));
+            }
+
+            // 3. Sıralama
             const sortBy = $("#sortDropdown").val();
             filtered.sort((a, b) => {
                 if (sortBy === "date_desc") return new Date(b.created) - new Date(a.created);
@@ -239,7 +296,7 @@
 
             let html = "";
             if (filtered.length === 0) {
-                html = `<tr><td colspan="5" class="text-center text-muted py-4">Bu sekmede gösterilecek kurs bulunamadı.</td></tr>`;
+                html = `<tr><td colspan="6" class="text-center text-muted py-4">Gösterilecek kurs bulunamadı.</td></tr>`;
             } else {
                 let enrolledIds = globalMyCourses.map(c => c.id);
 
@@ -248,6 +305,7 @@
                     html += `
                         <tr>
                             <td><strong class="text-dark">${item.name}</strong></td>
+                            <td><span class="badge badge-info p-2">${item.categoryName || 'Kategorisiz'}</span></td>
                             <td>${item.description}</td>
                             <td><span class="badge badge-secondary p-2">${item.teacherFullName || 'Atanmadı'}</span></td>
                             <td>${createdDate}</td>
@@ -265,23 +323,13 @@
                 return;
             }
 
-            let html = "";
-            html += `<li class="page-item ${current === 1 ? 'disabled' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="loadCourses(${current - 1})">Önceki</a>
-                     </li>`;
-
+            let html = `<li class="page-item ${current === 1 ? 'disabled' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadCourses(${current - 1})">Önceki</a></li>`;
             for (let i = 1; i <= totalPages; i++) {
-                html += `<li class="page-item ${i === current ? 'active' : ''}">
-                            <a class="page-link" href="javascript:void(0)" onclick="loadCourses(${i})">${i}</a>
-                         </li>`;
+                html += `<li class="page-item ${i === current ? 'active' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadCourses(${i})">${i}</a></li>`;
             }
-
-            html += `<li class="page-item ${current === totalPages ? 'disabled' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="loadCourses(${current + 1})">Sonraki</a>
-                     </li>`;
+            html += `<li class="page-item ${current === totalPages ? 'disabled' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadCourses(${current + 1})">Sonraki</a></li>`;
 
             $("#paginationContainer").html(html);
-
             const startItem = (current - 1) * pageSize + 1;
             const endItem = Math.min(current * pageSize, totalCount);
             $("#pageInfo").text(`Toplam ${totalCount} kurstan ${startItem}-${endItem} arası gösteriliyor.`);
@@ -296,8 +344,7 @@
             } else if (USER_ROLE === "Student") {
                 if (CURRENT_TAB === "MY_COURSES") {
                     actions += `<a href="/Assignments?courseId=${item.id}" class="btn btn-sm btn-primary"><i class="fas fa-tasks mr-1"></i>Ödevlere Git</a>`;
-                }
-                else {
+                } else {
                     if (enrolledIds.includes(item.id)) {
                         actions += `<span class="badge badge-success p-2"><i class="fas fa-check mr-1"></i>Kayıtlısınız</span>`;
                     } else {
@@ -311,45 +358,28 @@
         function openEditModal(id) {
             const course = globalAllCourses.find(c => c.id === id);
             if (course) {
-                $("#editCourseId").val(course.id); $("#editCourseName").val(course.name); $("#editCourseDesc").val(course.description); $("#editCourseRowVersion").val(course.rowVersion);
+                $("#editCourseId").val(course.id);
+                $("#editCourseName").val(course.name);
+                $("#editCourseDesc").val(course.description);
+                $("#editCourseCategory").val(course.categoryId);
+                $("#editCourseRowVersion").val(course.rowVersion);
                 $("#editCourseModal").modal("show");
             }
         }
 
         function deleteCourse(id) {
             Swal.fire({
-                title: 'Emin misiniz?',
-                text: "Bu kursu silerseniz, içindeki veriler kaybolabilir!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#e74a3b',
-                cancelButtonColor: '#858796',
-                confirmButtonText: 'Evet, Sil!',
-                cancelButtonText: 'İptal'
+                title: 'Emin misiniz?', text: "Bu kursu silerseniz, içindeki veriler kaybolabilir!", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#e74a3b', cancelButtonColor: '#858796', confirmButtonText: 'Evet, Sil!', cancelButtonText: 'İptal'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    $.ajax({
-                        url: `${API_BASE}/${id}`,
-                        method: "DELETE",
-                        success: function() {
-                            showToast("Silindi", "Kurs başarıyla silindi.", "danger");
-                            loadCourses(currentPage); 
-                        },
-                        error: function(err) { handleError(err); }
-                    });
+                    $.ajax({ url: `${API_BASE}/${id}`, method: "DELETE", success: function() { showToast("Silindi", "Kurs başarıyla silindi.", "danger"); loadCourses(currentPage); }, error: function(err) { handleError(err); } });
                 }
             });
         }
 
         function enroll(id) {
-            $.ajax({
-                url: `${API_BASE}/${id}/enroll`, method: "POST",
-                success: function() {
-                    showToast("Başarılı", "Kursa başarıyla kayıt oldunuz!", "success");
-                    loadCourses(currentPage);
-                },
-                error: function(err) { handleError(err); }
-            });
+            $.ajax({ url: `${API_BASE}/${id}/enroll`, method: "POST", success: function() { showToast("Başarılı", "Kursa başarıyla kayıt oldunuz!", "success"); loadCourses(currentPage); }, error: function(err) { handleError(err); } });
         }
 
         function handleError(err) {
@@ -368,27 +398,8 @@
             let swalIcon = type === 'danger' ? 'error' : type;
             let bgColor = type === 'danger' ? '#e74a3b' : (type === 'success' ? '#1cc88a' : '#f6c23e');
             let txtColor = type === 'warning' ? '#3a3b45' : '#ffffff';
-
-            const Toast = Swal.mixin({
-                toast: true,
-                position: 'bottom-end',
-                showConfirmButton: false,
-                timer: 5000,
-                timerProgressBar: true,
-                background: bgColor,
-                color: txtColor,
-                iconColor: txtColor,
-                didOpen: (toast) => {
-                    toast.addEventListener('mouseenter', Swal.stopTimer)
-                    toast.addEventListener('mouseleave', Swal.resumeTimer)
-                }
-            });
-
-            Toast.fire({
-               icon: swalIcon,
-               title: title,
-               text: message
-            });
+            const Toast = Swal.mixin({ toast: true, position: 'bottom-end', showConfirmButton: false, timer: 5000, timerProgressBar: true, background: bgColor, color: txtColor, iconColor: txtColor, didOpen: (toast) => { toast.addEventListener('mouseenter', Swal.stopTimer); toast.addEventListener('mouseleave', Swal.resumeTimer); } });
+            Toast.fire({ icon: swalIcon, title: title, text: message });
         }
     </script>
 }

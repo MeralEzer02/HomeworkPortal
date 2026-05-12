@@ -8,6 +8,8 @@ namespace HomeworkPortal.API.Models
         public string Description { get; set; }
         public string TeacherId { get; set; }
         public AppUser Teacher { get; set; }
+        public int CategoryId { get; set; }
+        public Category Category { get; set; } 
         public ICollection<Assignment> Assignments { get; set; }
         public ICollection<AppUser> Students { get; set; } = new List<AppUser>();
     }

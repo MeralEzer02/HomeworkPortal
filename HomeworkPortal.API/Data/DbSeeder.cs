@@ -1,5 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
-using HomeworkPortal.API.Models;
+﻿using HomeworkPortal.API.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace HomeworkPortal.API.Data
 {
@@ -13,7 +14,8 @@ namespace HomeworkPortal.API.Data
             {
                 if (!await roleManager.RoleExistsAsync(role))
                 {
-                    await roleManager.CreateAsync(new AppRole { Name = role });
+                    var result = await roleManager.CreateAsync(new AppRole { Name = role });
+                    if (!result.Succeeded) throw new Exception($"Rol oluşturulamadı ({role}): {string.Join(", ", result.Errors.Select(e => e.Description))}");
                 }
             }
 
@@ -28,7 +30,9 @@ namespace HomeworkPortal.API.Data
                     FirstName = "Admin",
                     LastName = "TrueAdmin"
                 };
-                await userManager.CreateAsync(admin, "Admin.123!");
+                var result = await userManager.CreateAsync(admin, "Admin.123!");
+                if (!result.Succeeded) throw new Exception($"Admin oluşturulamadı: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+
                 await userManager.AddToRoleAsync(admin, "Admin");
             }
 
@@ -46,7 +50,9 @@ namespace HomeworkPortal.API.Data
                         FirstName = "Teacher",
                         LastName = $"Teacher{index}"
                     };
-                    await userManager.CreateAsync(teacher, $"Teacher{index}.123!");
+                    var result = await userManager.CreateAsync(teacher, $"Teacher{index}.123!");
+                    if (!result.Succeeded) throw new Exception($"Öğretmen oluşturulamadı ({teacher.Email}): {string.Join(", ", result.Errors.Select(e => e.Description))}");
+
                     await userManager.AddToRoleAsync(teacher, "Teacher");
                 }
             }
@@ -65,11 +71,14 @@ namespace HomeworkPortal.API.Data
                         FirstName = $"User{index}",
                         LastName = $"Student{index}"
                     };
-                    await userManager.CreateAsync(student, $"Student{index}.123!");
+                    var result = await userManager.CreateAsync(student, $"Student{index}.123!");
+                    if (!result.Succeeded) throw new Exception($"Öğrenci oluşturulamadı ({student.Email}): {string.Join(", ", result.Errors.Select(e => e.Description))}");
+
                     await userManager.AddToRoleAsync(student, "Student");
                 }
             }
         }
+
         public static async Task SeedBadgesAsync(AppDbContext context)
         {
             var systemBadges = new List<Models.Badge>
@@ -84,13 +93,58 @@ namespace HomeworkPortal.API.Data
             };
 
             var existingBadgeNames = context.Badges.Select(b => b.Name).ToList();
-
             var badgesToAdd = systemBadges.Where(b => !existingBadgeNames.Contains(b.Name)).ToList();
 
             if (badgesToAdd.Any())
             {
                 await context.Badges.AddRangeAsync(badgesToAdd);
                 await context.SaveChangesAsync();
+            }
+
+            if (!await context.Categories.AnyAsync())
+            {
+                var categories = new List<Category>
+                {
+                    new Category { Name = "Temel Yeterlilik", Icon = "fas fa-square-root-alt" },
+                    new Category { Name = "Alan Yeterlilik(Sayısal)", Icon = "fas fa-square-root-alt" },
+                    new Category { Name = "Alan Yeterlilik(Sözel)", Icon = "fas fa-book" },
+                    new Category { Name = "Alan Yeterlilik(Dil)", Icon = "fas fa-language" }
+                };
+                await context.Categories.AddRangeAsync(categories);
+                await context.SaveChangesAsync();
+            }
+
+            if (!await context.Courses.AnyAsync())
+            {
+                var t1 = await context.Users.FirstOrDefaultAsync(u => u.Email == "teacher01@gmail.com");
+                var t2 = await context.Users.FirstOrDefaultAsync(u => u.Email == "teacher02@gmail.com");
+                var t3 = await context.Users.FirstOrDefaultAsync(u => u.Email == "teacher03@gmail.com");
+                var t4 = await context.Users.FirstOrDefaultAsync(u => u.Email == "teacher04@gmail.com");
+                var t5 = await context.Users.FirstOrDefaultAsync(u => u.Email == "teacher05@gmail.com");
+
+                if (t1 != null && t2 != null && t3 != null && t4 != null && t5 != null)
+                {
+                    var courses = new List<Course>
+                    {
+                        new Course { Name = "Temel Matematik", Description = "TYT", TeacherId = t2.Id, CategoryId = 1 },
+                        new Course { Name = "İleri Matematik", Description = "AYT", TeacherId = t2.Id, CategoryId = 2 },
+                        new Course { Name = "Türkçe", Description = "TYT", TeacherId = t3.Id, CategoryId = 3 },
+                        new Course { Name = "Edebiyat", Description = "AYT", TeacherId = t3.Id, CategoryId = 3 },
+                        new Course { Name = "Temel Fizik", Description = "TYT", TeacherId = t1.Id, CategoryId = 1 },
+                        new Course { Name = "İleri Fizik", Description = "AYT", TeacherId = t1.Id, CategoryId = 2 },
+                        new Course { Name = "Temel Kimya", Description = "TYT", TeacherId = t4.Id, CategoryId = 1 },
+                        new Course { Name = "İleri Kimya", Description = "AYT", TeacherId = t4.Id, CategoryId = 2 },
+                        new Course { Name = "Temel Biyoloji", Description = "TYT", TeacherId = t5.Id, CategoryId = 1 },
+                        new Course { Name = "İleri Biyoloji", Description = "AYT", TeacherId = t5.Id, CategoryId = 2 }
+                    };
+
+                    await context.Courses.AddRangeAsync(courses);
+                    await context.SaveChangesAsync();
+                }
+                else
+                {
+                    throw new Exception("Kurslar oluşturulamadı çünkü öğretmenler veritabanında bulunamadı!");
+                }
             }
         }
     }
