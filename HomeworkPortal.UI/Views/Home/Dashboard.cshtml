@@ -41,7 +41,7 @@
 else if (userRole == "Teacher")
 {
     <div class="row" id="teacherCardsContainer">
-        <div class="col-12 text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-info"></i> Verileriniz hesaplanıyor...</div>
+        <div class="col-12 text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-info"></i> Gerçek verileriniz hesaplanıyor...</div>
     </div>
 
     <div class="row fade-in" id="teacherChartsContainer" style="display:none;">
@@ -102,7 +102,8 @@ else if (userRole == "Student")
             opacity: 1;
             transform: translateY(0);
         }
-    }</style>
+    }
+</style>
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -124,7 +125,17 @@ else if (userRole == "Student")
 
                     let barCtx = document.getElementById("myBarChart");
                     if(barCtx && data.categoryStats) {
-                        new Chart(barCtx, { type: 'bar', data: { labels: data.categoryStats.map(c=>c.categoryName), datasets: [{ label: "Kurs Sayısı", backgroundColor: "#4e73df", data: data.categoryStats.map(c=>c.courseCount), maxBarThickness: 50 }] }, options: { maintainAspectRatio: false }});
+                        new Chart(barCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: data.categoryStats.map(c=>c.categoryName),
+                                datasets: [{ label: "Kurs Sayısı", backgroundColor: "#4e73df", data: data.categoryStats.map(c=>c.courseCount), maxBarThickness: 50 }]
+                            },
+                            options: {
+                                maintainAspectRatio: false,
+                                scales: { yAxes: [{ ticks: { beginAtZero: true, stepSize: 1 } }] }
+                            }
+                        });
                         $("#myBarChart").parent().next().hide();
                     }
                     let pieCtx = document.getElementById("myPieChart");
@@ -195,7 +206,7 @@ else if (userRole == "Student")
                                     maxBarThickness: 50
                                 }]
                             },
-                            options: { maintainAspectRatio: false, scales: { yAxes: [{ ticks: { beginAtZero:true, stepSize: 1 } }] } }
+                            options: { maintainAspectRatio: false, scales: { yAxes: [{ ticks: { beginAtZero: true, stepSize: 1 } }] } }
                         });
                     }
 

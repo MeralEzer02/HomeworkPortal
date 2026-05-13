@@ -91,7 +91,7 @@ else
         let CURRENT_COURSE_ID = "@courseId" !== "" ? parseInt("@courseId") : null;
 
         let globalAllAssignments = []; let coursesMap = {}; let courseStudentCounts = {}; let assignmentSubmissionCounts = {};
-        const PAGE_SIZE = 5; let currentActiveAssignments = []; let currentExpiredAssignments = []; let activePage = 1; let expiredPage = 1;
+        const PAGE_SIZE = 10; let currentActiveAssignments = []; let currentExpiredAssignments = []; let activePage = 1; let expiredPage = 1;
 
         $(document).ready(function () {
             moment.locale('tr');
