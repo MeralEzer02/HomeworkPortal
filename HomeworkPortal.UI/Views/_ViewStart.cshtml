@@ -1,3 +1,45 @@
-﻿@{
-    Layout = "_Layout";
+﻿@using Microsoft.AspNetCore.Http
+@using System.Text.Json
+@using System.Text
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var token = HttpContextAccessor.HttpContext?.Session.GetString("Token");
+    var userRole = "";
+
+    if (!string.IsNullOrEmpty(token))
+    {
+        try
+        {
+            var payload = token.Split('.')[1];
+            payload = payload.Replace('-', '+').Replace('_', '/');
+            payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+            var bytes = Convert.FromBase64String(payload);
+            var json = Encoding.UTF8.GetString(bytes);
+            var parsed = JsonSerializer.Deserialize<JsonElement>(json);
+
+            if (parsed.TryGetProperty("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", out var roleProp))
+                userRole = roleProp.GetString() ?? "";
+            else if (parsed.TryGetProperty("role", out roleProp))
+                userRole = roleProp.GetString() ?? "";
+        }
+        catch { }
+    }
+
+    if (userRole == "Admin")
+    {
+        Layout = "_AdminLayout";
+    }
+    else if (userRole == "Teacher")
+    {
+        Layout = "_TeacherLayout";
+    }
+    else if (userRole == "Student")
+    {
+        Layout = "_StudentLayout";
+    }
+    else
+    {
+        Layout = null;
+    }
 }

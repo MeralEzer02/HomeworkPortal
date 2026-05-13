@@ -1,0 +1,70 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <title>Homework Portal - Geleceğin Öğrenim Platformu</title>
+
+    <link href="~/scholar/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="~/scholar/assets/css/fontawesome.css">
+    <link rel="stylesheet" href="~/scholar/assets/css/templatemo-scholar.css">
+    <link rel="stylesheet" href="~/scholar/assets/css/owl.css">
+    <link rel="stylesheet" href="~/scholar/assets/css/animate.css">
+    <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css" />
+</head>
+
+<body>
+    <div id="js-preloader" class="js-preloader">
+        <div class="preloader-inner">
+            <span class="dot"></span>
+            <div class="dots">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </div>
+
+    <header class="header-area header-sticky">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <nav class="main-nav">
+                        <a href="/" class="logo">
+                            <h1>HW Portal</h1>
+                        </a>
+                        <ul class="nav">
+                            <li class="scroll-to-section"><a href="#top" class="active">Ana Sayfa</a></li>
+                            <li class="scroll-to-section"><a href="#features">Özellikler</a></li>
+                            <li class="scroll-to-section"><a href="#courses">Kurslar</a></li>
+                            <li class="scroll-to-section"><a href="#team">Eğitmenler</a></li>
+                            <li><a href="/Auth/Login" class="text-primary font-weight-bold">GİRİŞ YAP</a></li>
+                        </ul>
+                        <a class='menu-trigger'><span>Menu</span></a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    @RenderBody()
+
+    <footer>
+        <div class="container">
+            <div class="col-lg-12">
+                <p>Copyright © 2026 Homework Portal. Tüm hakları saklıdır. &nbsp;&nbsp;&nbsp; Design: <a href="https://templatemo.com" rel="nofollow" target="_blank">TemplateMo</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/scholar/vendor/jquery/jquery.min.js"></script>
+    <script src="~/scholar/vendor/bootstrap/js/bootstrap.min.js"></script>
+    <script src="~/scholar/assets/js/isotope.min.js"></script>
+    <script src="~/scholar/assets/js/owl-carousel.js"></script>
+    <script src="~/scholar/assets/js/counter.js"></script>
+    <script src="~/scholar/assets/js/custom.js"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

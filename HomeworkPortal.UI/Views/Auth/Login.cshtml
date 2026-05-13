@@ -1,125 +1,123 @@
 ﻿@{
     Layout = null;
 }
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Giriş Yap - Homework Portal</title>
+    <title>HW Portal - Sisteme Giriş</title>
 
-    <link href="~/Admin/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
-    <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
-    <link href="~/Admin/css/sb-admin-2.min.css" rel="stylesheet">
+    <link href="~/scholar/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #7a6ad8;
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .login-card {
+            background: #fff;
+            padding: 50px 40px;
+            border-radius: 25px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+            .login-card h2 {
+                color: #7a6ad8;
+                font-weight: 700;
+                margin-bottom: 10px;
+            }
+
+            .login-card p {
+                color: #777;
+                margin-bottom: 30px;
+                font-size: 14px;
+            }
+
+        .form-control {
+            border-radius: 25px;
+            height: 50px;
+            margin-bottom: 20px;
+            padding-left: 20px;
+            background-color: #f4f7fb;
+            border: none;
+        }
+
+            .form-control:focus {
+                box-shadow: none;
+                border: 1px solid #7a6ad8;
+                background-color: #fff;
+            }
+
+        .btn-primary {
+            border-radius: 25px;
+            height: 50px;
+            background-color: #7a6ad8;
+            border: none;
+            font-weight: bold;
+            width: 100%;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+            .btn-primary:hover {
+                background-color: #5b4ec4;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(122, 106, 216, 0.4);
+            }
+    </style>
 </head>
+<body>
 
-<body class="bg-gradient-primary">
+    <div class="login-card">
+        <h2>HW PORTAL</h2>
+        <p>Öğrenim Yönetim Sistemine Hoş Geldiniz</p>
 
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-xl-6 col-lg-8 col-md-9 mt-5">
-                <div class="card o-hidden border-0 shadow-lg my-5">
-                    <div class="card-body p-0">
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div class="p-5">
-                                    <div class="text-center">
-                                        <i class="fas fa-graduation-cap fa-3x text-primary mb-3"></i>
-                                        <h1 class="h4 text-gray-900 mb-4">Hoş Geldiniz!</h1>
-                                    </div>
+        <form id="loginForm">
+            <input type="email" class="form-control" id="email" placeholder="E-Posta Adresi" required>
+            <input type="password" class="form-control" id="password" placeholder="Şifre" required>
+            <button type="submit" class="btn btn-primary" id="btnLogin">Sisteme Giriş Yap</button>
+        </form>
 
-                                    <form class="user" id="loginForm">
-                                        <div id="errorAlert" class="alert alert-danger d-none text-center" role="alert"></div>
-
-                                        <div class="form-group">
-                                            <input type="email" class="form-control form-control-user" id="email" placeholder="Email Adresiniz" required>
-                                        </div>
-                                        <div class="form-group position-relative">
-                                            <input type="password" class="form-control form-control-user" id="password" placeholder="Şifreniz" required style="padding-right: 45px;">
-
-                                            <span id="togglePassword" class="position-absolute" style="right: 15px; top: 15px; cursor: pointer; z-index: 10;">
-                                                <i class="fas fa-eye text-gray-500" id="eyeIcon"></i>
-                                            </span>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary btn-user btn-block" id="btnLogin">
-                                            Giriş Yap
-                                        </button>
-                                    </form>
-                                    <hr>
-                                    <div class="text-center">
-                                        <a class="small" href="#">Şifrenizi mi unuttunuz?</a>
-                                    </div>
-                                    <div class="text-center mt-2">
-                                        <a class="small font-weight-bold text-primary" href="/Auth/Register">Hesabınız yok mu? Kayıt Olun!</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="mt-4">
+            <a href="/Auth/Register" style="color: #7a6ad8; font-size: 14px; text-decoration: none; font-weight: 500;">Hesabınız yok mu? Hemen Kayıt Olun</a>
         </div>
     </div>
 
-    <script src="~/Admin/vendor/jquery/jquery.min.js"></script>
-    <script src="~/Admin/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="~/Admin/vendor/jquery-easing/jquery.easing.min.js"></script>
-    <script src="~/Admin/js/sb-admin-2.min.js"></script>
-
+    <script src="~/scholar/vendor/jquery/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         $(document).ready(function () {
-
-            const passInput = $("#password");
-            const eyeIcon = $("#eyeIcon");
-
-            $("#togglePassword").on("mousedown touchstart", function (e) {
-                e.preventDefault();
-                passInput.attr("type", "text");
-                eyeIcon.removeClass("fa-eye").addClass("fa-eye-slash");
-            }).on("mouseup mouseleave touchend", function (e) {
-                e.preventDefault();
-                passInput.attr("type", "password");
-                eyeIcon.removeClass("fa-eye-slash").addClass("fa-eye");
-            });
-
-
             $("#loginForm").on("submit", function (e) {
                 e.preventDefault();
-
-                const loginData = {
-                    email: $("#email").val(),
-                    password: $("#password").val()
-                };
+                const email = $("#email").val();
+                const password = $("#password").val();
 
                 $.ajax({
                     url: "https://localhost:7113/api/Auth/login",
                     method: "POST",
                     contentType: "application/json",
-                    data: JSON.stringify(loginData),
-                    beforeSend: function () {
-                        $("#btnLogin").prop("disabled", true).text("Giriş Yapılıyor...");
-                        $("#errorAlert").addClass("d-none");
-                    },
+                    data: JSON.stringify({ email: email, password: password }),
+                    beforeSend: function() { $("#btnLogin").prop("disabled", true).text("Giriş Yapılıyor..."); },
                     success: function (res) {
-                        $.ajax({
-                            url: "/Auth/Login",
-                            method: "POST",
-                            contentType: "application/json",
-                            data: JSON.stringify(res.token),
-                            success: function () {
-                                window.location.href = "/Home/Index";
-                            }
+                        $.post("/Auth/SetSession", { token: res.token }, function () {
+                            window.location.href = "/Home/Dashboard";
                         });
                     },
                     error: function (err) {
-                        let msg = "Giriş başarısız.";
-                        if (err.responseJSON && err.responseJSON.message) {
-                            msg = err.responseJSON.message;
-                        }
-                        $("#errorAlert").removeClass("d-none").text(msg);
-                        $("#btnLogin").prop("disabled", false).text("Giriş Yap");
+                        let msg = err.responseJSON?.message || "Giriş başarısız!";
+                        Swal.fire({ icon: 'error', title: 'Hata', text: msg, confirmButtonColor: '#7a6ad8' });
+                        $("#btnLogin").prop("disabled", false).text("Sisteme Giriş Yap");
                     }
                 });
             });

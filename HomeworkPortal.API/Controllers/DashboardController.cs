@@ -55,31 +55,35 @@ namespace HomeworkPortal.API.Controllers
                 .Take(5)
                 .ToListAsync();
 
-            var dto = new DashboardDto
+            var categoryStats = await _context.Categories
+                .Select(c => new
+                {
+                    CategoryName = c.Name,
+                    CourseCount = c.Courses.Count()
+                })
+                .ToListAsync();
+
+            return Ok(new
             {
-                TotalStudents = students.Count,
-                TotalTeachers = teachers.Count,
-                TotalCourses = allCourses.Count,
-                TotalAssignments = allAssignments.Count,
-
-                GradedSubmissions = gradedSubmissions,
-                PendingSubmissions = pendingSubmissions,
-
-                CourseSubmissionStats = courseSubmissionStats,
-
-                ActiveAssignments = allAssignments
+                totalStudents = students.Count,
+                totalTeachers = teachers.Count,
+                totalCourses = allCourses.Count,
+                totalAssignments = allAssignments.Count,
+                gradedSubmissions = gradedSubmissions,
+                pendingSubmissions = pendingSubmissions,
+                courseSubmissionStats = courseSubmissionStats,
+                categoryStats = categoryStats,                
+                activeAssignments = allAssignments
                     .Where(a => a.DueDate >= now && a.DueDate <= fiveDaysLater)
                     .OrderBy(a => a.DueDate).Take(3)
                     .Select(a => new AssignmentSummaryDto { Id = a.Id, Title = a.Title, CourseName = a.Course?.Name ?? "", DueDate = a.DueDate })
                     .ToList(),
-
-                ExpiredAssignments = allAssignments
+                expiredAssignments = allAssignments
                     .Where(a => a.DueDate < now)
                     .OrderByDescending(a => a.DueDate).Take(3)
                     .Select(a => new AssignmentSummaryDto { Id = a.Id, Title = a.Title, CourseName = a.Course?.Name ?? "", DueDate = a.DueDate })
                     .ToList(),
-
-                RecentCourses = allCourses
+                recentCourses = allCourses
                     .OrderByDescending(c => c.Id).Take(5)
                     .Select(c => new CourseSummaryDto
                     {
@@ -90,9 +94,7 @@ namespace HomeworkPortal.API.Controllers
                         TeacherFullName = c.Teacher != null ? c.Teacher.FullName : "Atanmadı"
                     })
                     .ToList()
-            };
-
-            return Ok(dto);
+            });
         }
 
         [HttpGet("teacher")]
@@ -142,35 +144,12 @@ namespace HomeworkPortal.API.Controllers
                 MyTotalStudents = uniqueStudentCount,
                 MyTotalCourses = myCourses.Count,
                 MyTotalAssignments = myAssignments.Count,
-
                 GradedSubmissions = gradedSubmissions,
                 PendingSubmissions = pendingSubmissions,
-
                 CourseSubmissionStats = courseSubmissionStats,
-
-                ActiveAssignments = myAssignments
-                    .Where(a => a.DueDate >= now && a.DueDate <= fiveDaysLater)
-                    .OrderBy(a => a.DueDate).Take(3)
-                    .Select(a => new AssignmentSummaryDto { Id = a.Id, Title = a.Title, CourseName = a.Course.Name, DueDate = a.DueDate })
-                    .ToList(),
-
-                ExpiredAssignments = myAssignments
-                    .Where(a => a.DueDate < now)
-                    .OrderByDescending(a => a.DueDate).Take(3)
-                    .Select(a => new AssignmentSummaryDto { Id = a.Id, Title = a.Title, CourseName = a.Course.Name, DueDate = a.DueDate })
-                    .ToList(),
-
-                RecentCourses = myCourses
-                    .OrderByDescending(c => c.Id).Take(5)
-                    .Select(c => new CourseSummaryDto
-                    {
-                        Id = c.Id,
-                        Name = c.Name,
-                        Description = c.Description,
-                        EnrolledStudentCount = c.Students.Count,
-                        TeacherFullName = ""
-                    })
-                    .ToList()
+                ActiveAssignments = myAssignments.Where(a => a.DueDate >= now && a.DueDate <= fiveDaysLater).OrderBy(a => a.DueDate).Take(3).Select(a => new AssignmentSummaryDto { Id = a.Id, Title = a.Title, CourseName = a.Course.Name, DueDate = a.DueDate }).ToList(),
+                ExpiredAssignments = myAssignments.Where(a => a.DueDate < now).OrderByDescending(a => a.DueDate).Take(3).Select(a => new AssignmentSummaryDto { Id = a.Id, Title = a.Title, CourseName = a.Course.Name, DueDate = a.DueDate }).ToList(),
+                RecentCourses = myCourses.OrderByDescending(c => c.Id).Take(5).Select(c => new CourseSummaryDto { Id = c.Id, Name = c.Name, Description = c.Description, EnrolledStudentCount = c.Students.Count, TeacherFullName = "" }).ToList()
             };
 
             return Ok(dto);
@@ -210,21 +189,8 @@ namespace HomeworkPortal.API.Controllers
             {
                 MyEnrolledCoursesCount = myCourses.Count,
                 PendingAssignmentsCount = pendingAssignmentsCount,
-                MyCourses = myCourses.Select(c => new CourseSummaryDto
-                {
-                    Id = c.Id,
-                    Name = c.Name,
-                    Description = c.Description,
-                    EnrolledStudentCount = c.Students?.Count ?? 0,
-                    TeacherFullName = c.Teacher != null ? c.Teacher.FullName : "Atanmadı"
-                }).ToList(),
-                UpcomingAssignments = upcomingAssignments.Select(a => new AssignmentSummaryDto
-                {
-                    Id = a.Id,
-                    Title = a.Title,
-                    CourseName = a.Course?.Name ?? "",
-                    DueDate = a.DueDate
-                }).ToList()
+                MyCourses = myCourses.Select(c => new CourseSummaryDto { Id = c.Id, Name = c.Name, Description = c.Description, EnrolledStudentCount = c.Students?.Count ?? 0, TeacherFullName = c.Teacher != null ? c.Teacher.FullName : "Atanmadı" }).ToList(),
+                UpcomingAssignments = upcomingAssignments.Select(a => new AssignmentSummaryDto { Id = a.Id, Title = a.Title, CourseName = a.Course?.Name ?? "", DueDate = a.DueDate }).ToList()
             };
 
             return Ok(dto);

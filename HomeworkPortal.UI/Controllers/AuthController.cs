@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http; 
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace HomeworkPortal.UI.Controllers
 {
+    [AllowAnonymous]
     public class AuthController : Controller
     {
         [HttpGet]
@@ -10,18 +12,20 @@ namespace HomeworkPortal.UI.Controllers
         {
             if (!string.IsNullOrEmpty(HttpContext.Session.GetString("Token")))
             {
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Dashboard", "Home");
             }
             return View();
         }
 
         [HttpPost]
-        public IActionResult Login([FromBody] string token)
+        public IActionResult SetSession(string token)
         {
-            if (string.IsNullOrEmpty(token)) return BadRequest("Token boş olamaz");
-
-            HttpContext.Session.SetString("Token", token);
-            return Ok();
+            if (!string.IsNullOrEmpty(token))
+            {
+                HttpContext.Session.SetString("Token", token);
+                return Ok();
+            }
+            return BadRequest("Token boş olamaz");
         }
 
         public IActionResult Logout()
@@ -35,7 +39,7 @@ namespace HomeworkPortal.UI.Controllers
         {
             if (!string.IsNullOrEmpty(HttpContext.Session.GetString("Token")))
             {
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Dashboard", "Home");
             }
             return View();
         }

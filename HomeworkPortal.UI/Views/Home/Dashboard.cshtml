@@ -1,0 +1,261 @@
+﻿@using Microsoft.AspNetCore.Http
+@using System.Text.Json
+@using System.Text
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    ViewData["Title"] = "Sistem Özeti (Dashboard)";
+    var token = HttpContextAccessor.HttpContext?.Session.GetString("Token");
+    var userRole = ""; var userEmail = "Kullanıcı";
+
+    if (!string.IsNullOrEmpty(token))
+    {
+        try
+        {
+            var payload = token.Split('.')[1].Replace('-', '+').Replace('_', '/').PadRight(token.Split('.')[1].Length + (4 - token.Split('.')[1].Length % 4) % 4, '=');
+            var parsed = JsonSerializer.Deserialize<JsonElement>(Encoding.UTF8.GetString(Convert.FromBase64String(payload)));
+            if (parsed.TryGetProperty("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", out var roleProp)) userRole = roleProp.GetString() ?? "";
+            else if (parsed.TryGetProperty("role", out roleProp)) userRole = roleProp.GetString() ?? "";
+            if (parsed.TryGetProperty("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", out var emailProp)) userEmail = emailProp.GetString() ?? "Kullanıcı";
+            else if (parsed.TryGetProperty("email", out emailProp)) userEmail = emailProp.GetString() ?? "Kullanıcı";
+        }
+        catch { }
+    }
+}
+
+@if (userRole == "Admin" || userRole == "Teacher")
+{
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-tachometer-alt mr-2 text-primary"></i>@(userRole == "Admin" ? "Sistem Özeti (Admin Dashboard)" : "Öğretmen Paneli")</h1>
+    </div>
+}
+
+@if (userRole == "Admin")
+{
+    <div class="row" id="adminCardsContainer"><div class="col-12 text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i> Yükleniyor...</div></div>
+    <div class="row">
+        <div class="col-xl-4 col-lg-5"><div class="card shadow mb-4"><div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Ödev Dağılımı (Pasta)</h6></div><div class="card-body"><div class="chart-pie pt-4 pb-2"><canvas id="myPieChart"></canvas></div><div class="text-center small text-muted mt-2">API güncellenince dolacak</div></div></div></div>
+        <div class="col-xl-8 col-lg-7"><div class="card shadow mb-4"><div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Kategorilerdeki Kurs Sayıları</h6></div><div class="card-body"><div class="chart-bar"><canvas id="myBarChart"></canvas></div><div class="text-center small text-muted mt-2">API güncellenince dolacak</div></div></div></div>
+    </div>
+}
+else if (userRole == "Teacher")
+{
+    <div class="row" id="teacherCardsContainer">
+        <div class="col-12 text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-info"></i> Verileriniz hesaplanıyor...</div>
+    </div>
+
+    <div class="row fade-in" id="teacherChartsContainer" style="display:none;">
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4 border-bottom-primary">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-chart-bar mr-2"></i>Derslere Göre Ödev Dağılımı</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area" style="height: 300px;">
+                        <canvas id="teacherBarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4 border-bottom-success">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-success"><i class="fas fa-chart-pie mr-2"></i>Öğrenci Notlandırma Durumu</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie pt-4 pb-2" style="height: 300px;">
+                        <canvas id="teacherPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card shadow mb-4 border-left-info">
+                <div class="card-body">
+                    <h5 class="text-info font-weight-bold mb-3"><i class="fas fa-bullhorn mr-2"></i>Eğitmen Duyuru Panosu</h5>
+                    <p>Sisteme yeni özellikler eklendi! Artık ödevlerinize dosya kabul formatları belirleyebilir ve öğrencilerin teslimlerini sol menüden anlık olarak takip edebilirsiniz.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (userRole == "Student")
+{
+    <div id="studentDashboardContent"><div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-3x" style="color:#7a6ad8;"></i><p class="mt-3">Öğrenme verileriniz yükleniyor...</p></div></div>
+}
+
+<style>
+    .fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }</style>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+
+    @if (userRole == "Admin")
+    {
+        <script src="~/Admin/vendor/chart.js/Chart.min.js"></script>
+        <script>
+            $(document).ready(function() {
+                $.get("https://localhost:7113/api/Dashboard/admin", function(data) {
+                    let cardsHtml = `
+                        <div class="col-xl-3 col-md-6 mb-4"><div class="card border-left-primary shadow h-100 py-2"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Toplam Öğrenci</div><div class="h5 mb-0 font-weight-bold text-gray-800">${data.totalStudents || 0}</div></div><div class="col-auto"><i class="fas fa-user-graduate fa-2x text-gray-300"></i></div></div></div></div></div>
+                        <div class="col-xl-3 col-md-6 mb-4"><div class="card border-left-success shadow h-100 py-2"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs font-weight-bold text-success text-uppercase mb-1">Toplam Öğretmen</div><div class="h5 mb-0 font-weight-bold text-gray-800">${data.totalTeachers || 0}</div></div><div class="col-auto"><i class="fas fa-chalkboard-teacher fa-2x text-gray-300"></i></div></div></div></div></div>
+                        <div class="col-xl-3 col-md-6 mb-4"><div class="card border-left-info shadow h-100 py-2"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs font-weight-bold text-info text-uppercase mb-1">Açılan Kurs Sayısı</div><div class="h5 mb-0 font-weight-bold text-gray-800">${data.totalCourses || 0}</div></div><div class="col-auto"><i class="fas fa-book fa-2x text-gray-300"></i></div></div></div></div></div>
+                        <div class="col-xl-3 col-md-6 mb-4"><div class="card border-left-warning shadow h-100 py-2"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Sistemdeki Ödevler</div><div class="h5 mb-0 font-weight-bold text-gray-800">${data.totalAssignments || 0}</div></div><div class="col-auto"><i class="fas fa-tasks fa-2x text-gray-300"></i></div></div></div></div></div>
+                    `;
+                    $("#adminCardsContainer").html(cardsHtml);
+
+                    let barCtx = document.getElementById("myBarChart");
+                    if(barCtx && data.categoryStats) {
+                        new Chart(barCtx, { type: 'bar', data: { labels: data.categoryStats.map(c=>c.categoryName), datasets: [{ label: "Kurs Sayısı", backgroundColor: "#4e73df", data: data.categoryStats.map(c=>c.courseCount), maxBarThickness: 50 }] }, options: { maintainAspectRatio: false }});
+                        $("#myBarChart").parent().next().hide();
+                    }
+                    let pieCtx = document.getElementById("myPieChart");
+                    if(pieCtx && data.courseSubmissionStats && data.courseSubmissionStats.length > 0) {
+                        new Chart(pieCtx, { type: 'doughnut', data: { labels: data.courseSubmissionStats.map(c=>c.courseName), datasets: [{ data: data.courseSubmissionStats.map(c=>c.submissionCount), backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e'] }] }, options: { maintainAspectRatio: false }});
+                        $("#myPieChart").parent().next().hide();
+                    }
+                });
+            });
+        </script>
+    }
+    else if (userRole == "Teacher")
+    {
+        <script src="~/Admin/vendor/chart.js/Chart.min.js"></script>
+        <script>
+            $(document).ready(async function() {
+                try {
+                    const coursesRes = await $.ajax({ url: "https://localhost:7113/api/Courses?pageNumber=1&pageSize=1000", method: "GET" }).catch(() => ({ data: [] }));
+                    const courses = coursesRes.data || coursesRes || [];
+                    const totalCourses = courses.length;
+
+                    const assignmentPromises = courses.map(c => $.ajax({ url: `https://localhost:7113/api/Assignments/course/${c.id}?pageNumber=1&pageSize=1000`, method: "GET" }).catch(() => ({ data: [] })));
+                    const assignmentsResults = await Promise.all(assignmentPromises);
+
+                    let allAssignments = [];
+                    assignmentsResults.forEach(res => {
+                        const list = res.data || res || [];
+                        if(Array.isArray(list)) allAssignments.push(...list);
+                    });
+
+                    const submissionsRes = await $.ajax({ url: "https://localhost:7113/api/Submissions/all?pageNumber=1&pageSize=1000", method: "GET" }).catch(() => ({ data: [] }));
+                    const submissions = submissionsRes.data || submissionsRes || [];
+
+                    // Kart Hesaplamaları
+                    const now = new Date();
+                    const activeAssignments = allAssignments.filter(a => new Date(a.dueDate) >= now).length;
+                    const pendingGrading = submissions.filter(s => s.grade === null || s.grade === undefined).length;
+                    const completedGrading = submissions.length - pendingGrading;
+
+                    let html = `
+                        <div class="col-xl-4 col-md-6 mb-4"><div class="card border-left-primary shadow h-100 py-2"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Verdiğim Dersler</div><div class="h5 mb-0 font-weight-bold text-gray-800">${totalCourses}</div></div><div class="col-auto"><i class="fas fa-book fa-2x text-gray-300"></i></div></div></div></div></div>
+                        <div class="col-xl-4 col-md-6 mb-4"><div class="card border-left-warning shadow h-100 py-2"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Aktif Ödevler</div><div class="h5 mb-0 font-weight-bold text-gray-800">${activeAssignments}</div></div><div class="col-auto"><i class="fas fa-tasks fa-2x text-gray-300"></i></div></div></div></div></div>
+                        <div class="col-xl-4 col-md-6 mb-4"><div class="card border-left-success shadow h-100 py-2"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs font-weight-bold text-success text-uppercase mb-1">Bekleyen Notlandırmalar</div><div class="h5 mb-0 font-weight-bold text-gray-800">${pendingGrading}</div></div><div class="col-auto"><i class="fas fa-clipboard-check fa-2x text-gray-300"></i></div></div></div></div></div>
+                    `;
+                    $("#teacherCardsContainer").html(html);
+
+                    $("#teacherChartsContainer").fadeIn();
+
+                    let courseNames = [];
+                    let assignmentsPerCourse = [];
+                    courses.forEach(c => {
+                        courseNames.push(c.name);
+                        assignmentsPerCourse.push(allAssignments.filter(a => a.courseId === c.id).length);
+                    });
+
+                    let barCtx = document.getElementById("teacherBarChart");
+                    if (barCtx) {
+                        new Chart(barCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: courseNames,
+                                datasets: [{
+                                    label: "Açılan Ödev",
+                                    backgroundColor: "#4e73df",
+                                    hoverBackgroundColor: "#2e59d9",
+                                    borderColor: "#4e73df",
+                                    data: assignmentsPerCourse,
+                                    maxBarThickness: 50
+                                }]
+                            },
+                            options: { maintainAspectRatio: false, scales: { yAxes: [{ ticks: { beginAtZero:true, stepSize: 1 } }] } }
+                        });
+                    }
+
+                    let pieCtx = document.getElementById("teacherPieChart");
+                    if (pieCtx && submissions.length > 0) {
+                        new Chart(pieCtx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: ["Bekleyen Notlar", "Okunan Ödevler"],
+                                datasets: [{
+                                    data: [pendingGrading, completedGrading],
+                                    backgroundColor: ['#f6c23e', '#1cc88a'],
+                                    hoverBackgroundColor: ['#dda20a', '#17a673'],
+                                    hoverBorderColor: "rgba(234, 236, 244, 1)",
+                                }]
+                            },
+                            options: { maintainAspectRatio: false, cutoutPercentage: 70, legend: { display: true, position: 'bottom' } }
+                        });
+                    } else if (pieCtx) {
+                        $(pieCtx).parent().html('<div class="text-center text-muted d-flex align-items-center justify-content-center h-100" style="flex-direction:column;"><i class="fas fa-box-open fa-3x mb-3 opacity-50"></i><p>Henüz değerlendirilecek bir teslimat bulunmuyor.</p></div>');
+                    }
+
+                } catch (err) {
+                    $("#teacherCardsContainer").html('<div class="col-12 text-center text-danger">Veriler yüklenirken hata oluştu.</div>');
+                    console.error(err);
+                }
+            });
+        </script>
+    }
+    else if (userRole == "Student")
+    {
+        <script>
+            $(document).ready(function() {
+                $.get("https://localhost:7113/api/Dashboard/student", function(data) {
+                    let userName = "@userEmail.Split('@')[0]";
+                    let html = `
+                        <div class="student-card mb-4" style="background: linear-gradient(135deg, #7a6ad8 0%, #a294f5 100%); color: white; padding: 30px;">
+                            <div class="row align-items-center"><div class="col-md-8"><h2 class="font-weight-bold mb-2">Hoş Geldin, ${userName} 👋</h2><p class="mb-0" style="font-size: 16px; opacity: 0.9;">Bugün <strong>${data.pendingAssignmentsCount}</strong> adet yaklaşan ödev teslimin var.</p></div><div class="col-md-4 text-right d-none d-md-block"><i class="fas fa-graduation-cap fa-4x" style="opacity: 0.3;"></i></div></div>
+                        </div>
+                        <div class="row"><div class="col-lg-8 mb-4"><div class="student-card h-100"><div class="card-header-purple d-flex justify-content-between align-items-center" onclick="window.location.href='/Courses'" style="cursor: pointer;"><h5 class="mb-0" style="font-size: 16px;"><i class="fas fa-book-open mr-2"></i> Kayıtlı Kurslarım</h5><span class="badge badge-light text-dark">${data.myEnrolledCoursesCount} Kurs <i class="fas fa-chevron-right ml-1"></i></span></div><div class="card-body p-4">
+                    `;
+                    if(data.myCourses && data.myCourses.length > 0) {
+                        data.myCourses.forEach(c => {
+                            let realProgress = 0; html += `<div class="mb-4"><div class="d-flex justify-content-between mb-1"><strong style="color: #333;">${c.name}</strong><span class="text-muted" style="font-size:12px;">${c.teacherFullName}</span></div><div class="progress" style="height: 10px; border-radius: 5px;"><div class="progress-bar" role="progressbar" style="width: ${realProgress}%; background-color: #7a6ad8;"></div></div><div class="text-right mt-1"><small style="color:#7a6ad8; font-weight:600;">%${realProgress} Tamamlandı</small></div></div>`;
+                        });
+                    } else { html += `<div class="text-center py-3 text-muted">Henüz bir kursa kayıtlı değilsiniz.</div>`; }
+                    html += `</div></div></div><div class="col-lg-4 mb-4"><div class="student-card mb-4"><div class="card-header-purple d-flex justify-content-between align-items-center" onclick="window.location.href='/Assignments'" style="background-color: #ff6b6b; cursor: pointer;"><h5 class="mb-0" style="font-size: 16px;"><i class="fas fa-clock mr-2"></i> Yaklaşan Ödevler</h5><i class="fas fa-chevron-right text-white"></i></div><div class="card-body p-3">`;
+                    if(data.upcomingAssignments && data.upcomingAssignments.length > 0) {
+                        data.upcomingAssignments.forEach(a => {
+                            let date = new Date(a.dueDate).toLocaleDateString('tr-TR'); html += `<div class="p-2 mb-2 border-bottom"><strong class="d-block" style="color: #333; font-size:14px;">${a.title}</strong><small class="text-muted">${a.courseName} | Son: <span style="color:#ff6b6b; font-weight:bold;">${date}</span></small></div>`;
+                        });
+                    } else { html += `<div class="text-center py-3 text-muted small">Yaklaşan ödeviniz yok. Harika!</div>`; }
+                    html += `</div></div><div class="student-card"><div class="card-header-purple" style="background-color: #1cc88a;"><h5 class="mb-0" style="font-size: 16px;"><i class="fas fa-medal mr-2"></i> Rozetlerim</h5></div><div class="card-body p-3 text-center"><div class="d-flex justify-content-center mb-3 mt-2"><div class="mx-3 text-center"><i class="fas fa-seedling fa-2x" style="color: #1cc88a;"></i><br><small class="mt-1 d-block font-weight-bold">İlk Kan</small></div><div class="mx-3 text-center"><i class="fas fa-running fa-2x" style="color: #36b9cc;"></i><br><small class="mt-1 d-block font-weight-bold">Hızlı Çaylak</small></div></div><button type="button" class="btn btn-sm btn-outline-success mt-2 font-weight-bold" onclick="showAllBadges()" style="border-radius:20px;">Tümünü Gör</button></div></div></div></div>`;
+                    $("#studentDashboardContent").html(html);
+                });
+            });
+
+            function showAllBadges() {
+                Swal.fire({ title: '<h4 style="color:#1cc88a; font-weight:bold;"><i class="fas fa-trophy mr-2"></i> Rozet Koleksiyonum</h4>', html: `<div class="row text-center mt-3"><div class="col-4 mb-3"><i class="fas fa-seedling fa-3x" style="color: #1cc88a;"></i><br><b class="mt-2 d-block">İlk Kan</b><small class="text-muted">İlk ödev teslimi</small></div><div class="col-4 mb-3"><i class="fas fa-running fa-3x" style="color: #36b9cc;"></i><br><b class="mt-2 d-block">Hızlı Çaylak</b><small class="text-muted">Erken teslim</small></div><div class="col-4 mb-3"><i class="fas fa-fire fa-3x" style="color: #f6c23e;"></i><br><b class="mt-2 d-block">Ateşli</b><small class="text-muted">3 gün üst üste giriş</small></div><div class="col-4"><i class="fas fa-brain fa-3x" style="color: #e74a3b; opacity:0.3;"></i><br><b class="mt-2 d-block text-muted">Dahi</b><small class="text-muted">Kilitli</small></div><div class="col-4"><i class="fas fa-star fa-3x" style="color: #f6c23e; opacity:0.3;"></i><br><b class="mt-2 d-block text-muted">Mükemmel</b><small class="text-muted">Kilitli</small></div></div>`, showCloseButton: true, showConfirmButton: false, width: '600px' });
+            }
+        </script>
+    }
+}

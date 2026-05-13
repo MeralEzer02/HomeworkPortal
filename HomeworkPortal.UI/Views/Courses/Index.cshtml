@@ -1,405 +1,131 @@
-﻿@{
+﻿@using Microsoft.AspNetCore.Http
+@using System.Text.Json
+@using System.Text
+@inject IHttpContextAccessor HttpContextAccessor
+@{
     ViewData["Title"] = "Kurslar";
-    var role = ViewBag.Role as string;
-}
-
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">
-        @if (role == "Admin")
-        {
-            <text><i class="fas fa-book mr-2 text-primary"></i>Tüm Kurslar (Yönetici Paneli)</text>
-        }
-        else if (role == "Teacher")
-        {
-            <text><i class="fas fa-chalkboard-teacher mr-2 text-primary"></i>Verdiğim Dersler</text>
-        }
-        else
-        {
-            <text><i class="fas fa-user-graduate mr-2 text-primary"></i>Öğrenci Kurs Merkezi</text>
-        }
-    </h1>
-
-    @if (role == "Admin" || role == "Teacher")
+    var token = HttpContextAccessor.HttpContext?.Session.GetString("Token");
+    var role = "";
+    if (!string.IsNullOrEmpty(token))
     {
-        <button class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" data-toggle="modal" data-target="#courseModal">
-            <i class="fas fa-plus fa-sm text-white-50"></i> Yeni Kurs Oluştur
-        </button>
+        try
+        {
+            var payload = token.Split('.')[1].Replace('-', '+').Replace('_', '/').PadRight(token.Split('.')[1].Length + (4 - token.Split('.')[1].Length % 4) % 4, '=');
+            var parsed = JsonSerializer.Deserialize<JsonElement>(Encoding.UTF8.GetString(Convert.FromBase64String(payload)));
+            if (parsed.TryGetProperty("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", out var roleProp)) role = roleProp.GetString() ?? "";
+            else if (parsed.TryGetProperty("role", out roleProp)) role = roleProp.GetString() ?? "";
+        }
+        catch { }
     }
-</div>
+}
 
 @if (role == "Student")
 {
-    <ul class="nav nav-tabs mb-4 font-weight-bold" id="courseTab" role="tablist">
-        <li class="nav-item">
-            <a class="nav-link active text-primary" id="my-courses-tab" data-toggle="tab" href="#tab-pane" role="tab" onclick="switchTab('MY_COURSES')">
-                <i class="fas fa-layer-group mr-2"></i>Kayıtlı Olduğum Kurslar
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link text-secondary" id="all-courses-tab" data-toggle="tab" href="#tab-pane" role="tab" onclick="switchTab('ALL_COURSES')">
-                <i class="fas fa-globe mr-2"></i>Tüm Kursları Keşfet
-            </a>
-        </li>
-    </ul>
+    <div class="container mt-5 fade-in">
+        <div class="section-heading text-center mb-5"><h6 style="color:#7a6ad8; font-weight:700;">Tüm Kurslar</h6><h2>Kendinizi Geliştirmeye Başlayın</h2></div>
+        <ul class="nav nav-tabs justify-content-center border-0 mb-5" id="courseTab" role="tablist">
+            <li class="nav-item mx-2"><a class="nav-link active font-weight-bold shadow-sm" id="my-courses-tab" data-toggle="tab" href="#tab-pane" role="tab" onclick="switchTab('MY_COURSES')" style="border-radius:30px; padding:10px 25px; color:#fff; background-color:#7a6ad8;"><i class="fas fa-layer-group mr-2"></i>Kayıtlı Olduğum Kurslar</a></li>
+            <li class="nav-item mx-2"><a class="nav-link font-weight-bold shadow-sm text-secondary" id="all-courses-tab" data-toggle="tab" href="#tab-pane" role="tab" onclick="switchTab('ALL_COURSES')" style="border-radius:30px; padding:10px 25px; background-color:#fff;"><i class="fas fa-globe mr-2"></i>Tüm Kursları Keşfet</a></li>
+        </ul>
+        <div class="row mb-4 justify-content-center"><div class="col-md-6"><input type="text" id="searchInput" class="form-control" placeholder="Kurs ara..." style="border-radius:30px; padding:20px; box-shadow:0 5px 15px rgba(0,0,0,0.05); border:none;"></div><div class="col-md-4 mt-3 mt-md-0"><select id="filterCategoryDropdown" class="form-control" style="border-radius:30px; height:45px; box-shadow:0 5px 15px rgba(0,0,0,0.05); border:none;"><option value="">Tüm Kategoriler</option></select></div></div>
+        <div class="row" id="studentCourseList"><div class="col-12 text-center py-5"><i class="fas fa-spinner fa-spin fa-3x" style="color:#7a6ad8;"></i></div></div>
+    </div>
+}
+else
+{
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Sistemdeki Kurslar</h1>
+        <button class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" data-toggle="modal" data-target="#courseModal"><i class="fas fa-plus fa-sm text-white-50"></i> Yeni Kurs Oluştur</button>
+    </div>
+    <div class="card shadow mb-4 border-left-primary"><div class="card-body py-3"><div class="row"><div class="col-md-4 mb-2 mb-md-0"><label class="small font-weight-bold text-primary"><i class="fas fa-filter mr-1"></i>Kategori</label><select id="filterCategoryDropdown" class="form-control form-control-sm"><option value="">Tüm Kategoriler</option></select></div><div class="col-md-4 mb-2 mb-md-0"><label class="small font-weight-bold text-primary"><i class="fas fa-sort mr-1"></i>Sıralama</label><select id="sortDropdown" class="form-control form-control-sm"><option value="date_desc">En Yeni Eklenenler (Önce)</option><option value="date_asc">En Eski Eklenenler (Önce)</option><option value="name_asc">Kurs Adı (A-Z)</option></select></div><div class="col-md-4"><label class="small font-weight-bold text-primary"><i class="fas fa-search mr-1"></i>Arama</label><input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Arama..."></div></div></div></div>
+    <div class="card shadow mb-4"><div class="card-body"><div class="table-responsive"><table class="table table-bordered table-hover mb-0" width="100%" cellspacing="0"><thead class="thead-dark"><tr><th>Kurs Adı</th><th>Kategori</th><th>Açıklama</th><th>Öğretmen</th><th>Tarih</th><th>İşlem</th></tr></thead><tbody id="courseTableBody"></tbody></table></div></div></div>
 }
 
-<div class="card shadow mb-4 border-left-primary">
-    <div class="card-body py-3">
-        <div class="row">
-            <div class="col-md-4 mb-2 mb-md-0">
-                <label class="small font-weight-bold text-primary"><i class="fas fa-filter mr-1"></i>Kategori</label>
-                <select id="filterCategoryDropdown" class="form-control form-control-sm">
-                    <option value="">Tüm Kategoriler</option>
-                </select>
-            </div>
-            <div class="col-md-4 mb-2 mb-md-0">
-                <label class="small font-weight-bold text-primary"><i class="fas fa-sort mr-1"></i>Sıralama</label>
-                <select id="sortDropdown" class="form-control form-control-sm">
-                    <option value="date_desc">En Yeni Eklenenler (Önce)</option>
-                    <option value="date_asc">En Eski Eklenenler (Önce)</option>
-                    <option value="name_asc">Kurs Adı (A-Z)</option>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="small font-weight-bold text-primary"><i class="fas fa-search mr-1"></i>Arama</label>
-                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Arama...">
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="card shadow mb-4">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover mb-0" width="100%" cellspacing="0">
-                <thead class="thead-dark">
-                    <tr>
-                        <th>Kurs Adı</th>
-                        <th>Kategori</th>
-                        <th>Açıklama</th>
-                        <th>Öğretmen</th>
-                        <th>Tarih</th>
-                        <th>İşlem</th>
-                    </tr>
-                </thead>
-                <tbody id="courseTableBody">
-                </tbody>
-            </table>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center mt-3 px-2">
-            <div id="pageInfo" class="small font-weight-bold text-muted"></div>
-            <nav aria-label="Page navigation">
-                <ul class="pagination pagination-sm mb-0" id="paginationContainer"></ul>
-            </nav>
-        </div>
-
-    </div>
-</div>
-
-@* Kurs Ekleme Modalı *@
-<div class="modal fade" id="courseModal" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Yeni Kurs Oluştur</h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            </div>
-            <div class="modal-body">
-                <form id="courseForm">
-                    <div class="form-group">
-                        <label class="font-weight-bold">Kategori</label>
-                        <select class="form-control" id="courseCategory" required>
-                            <option value="">Kategori Seçin...</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label class="font-weight-bold">Kurs Adı</label><input type="text" id="courseName" class="form-control" required></div>
-                    <div class="form-group"><label class="font-weight-bold">Açıklama</label><textarea id="courseDesc" class="form-control" rows="3" required></textarea></div>
-                    <button type="submit" class="btn btn-primary btn-block" id="btnSave">Kaydet</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-@* Kurs Düzenleme Modalı *@
-<div class="modal fade" id="editCourseModal" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title">Kursu Düzenle</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            </div>
-            <div class="modal-body">
-                <form id="editCourseForm">
-                    <input type="hidden" id="editCourseId">
-                    <input type="hidden" id="editCourseRowVersion">
-                    <div class="form-group">
-                        <label class="font-weight-bold">Kategori</label>
-                        <select class="form-control" id="editCourseCategory" required>
-                            <option value="">Kategori Seçin...</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label class="font-weight-bold">Kurs Adı</label><input type="text" id="editCourseName" class="form-control" required></div>
-                    <div class="form-group"><label class="font-weight-bold">Açıklama</label><textarea id="editCourseDesc" class="form-control" rows="3" required></textarea></div>
-                    <button type="submit" class="btn btn-warning btn-block font-weight-bold" id="btnUpdate">Güncelle</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+<div class="modal fade" id="courseModal" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true"><div class="modal-dialog" role="document"><div class="modal-content"><div class="modal-header bg-primary text-white"><h5 class="modal-title">Yeni Kurs Oluştur</h5><button type="button" class="close text-white" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div><div class="modal-body"><form id="courseForm"><div class="form-group"><label class="font-weight-bold">Kategori</label><select class="form-control" id="courseCategory" required><option value="">Kategori Seçin...</option></select></div><div class="form-group"><label class="font-weight-bold">Kurs Adı</label><input type="text" id="courseName" class="form-control" required></div><div class="form-group"><label class="font-weight-bold">Açıklama</label><textarea id="courseDesc" class="form-control" rows="3" required></textarea></div><button type="submit" class="btn btn-primary btn-block" id="btnSave">Kaydet</button></form></div></div></div></div>
+<div class="modal fade" id="editCourseModal" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true"><div class="modal-dialog" role="document"><div class="modal-content"><div class="modal-header bg-warning text-dark"><h5 class="modal-title">Kursu Düzenle</h5><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div><div class="modal-body"><form id="editCourseForm"><input type="hidden" id="editCourseId"><input type="hidden" id="editCourseRowVersion"><div class="form-group"><label class="font-weight-bold">Kategori</label><select class="form-control" id="editCourseCategory" required><option value="">Kategori Seçin...</option></select></div><div class="form-group"><label class="font-weight-bold">Kurs Adı</label><input type="text" id="editCourseName" class="form-control" required></div><div class="form-group"><label class="font-weight-bold">Açıklama</label><textarea id="editCourseDesc" class="form-control" rows="3" required></textarea></div><button type="submit" class="btn btn-warning btn-block font-weight-bold" id="btnUpdate">Güncelle</button></form></div></div></div></div>
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
     <script>
-        const API_BASE = "https://localhost:7113/api/Courses";
-        const CAT_API_BASE = "https://localhost:7113/api/Categories";
-        const USER_ROLE = "@role";
-
-        let globalAllCourses = [];
-        let globalMyCourses = [];
-        let CURRENT_TAB = USER_ROLE === "Student" ? "MY_COURSES" : "ALL_COURSES";
-
-        let currentPage = 1;
-        const pageSize = 10;
+        const API_BASE = "https://localhost:7113/api/Courses"; const CAT_API_BASE = "https://localhost:7113/api/Categories"; const USER_ROLE = "@role";
+        let globalAllCourses = []; let globalMyCourses = []; let CURRENT_TAB = USER_ROLE === "Student" ? "MY_COURSES" : "ALL_COURSES";
 
         $(document).ready(function () {
-            loadCategories();
-            loadCourses(currentPage);
+            loadCategories(); loadCourses(1);
+            $("#searchInput, #sortDropdown, #filterCategoryDropdown").on("change keyup", applyFiltersAndRender);
 
-            $("#searchInput").on("keyup", applyFiltersAndRender);
-            $("#sortDropdown").on("change", applyFiltersAndRender);
-            $("#filterCategoryDropdown").on("change", applyFiltersAndRender);
-
-            $('.nav-link').on('click', function() {
-                $('.nav-link').removeClass('text-primary').addClass('text-secondary');
-                $(this).removeClass('text-secondary').addClass('text-primary');
-            });
+            if(USER_ROLE === "Student"){ $('#courseTab .nav-link').on('click', function() { $('#courseTab .nav-link').css({"background-color":"#fff", "color":"#6c757d"}); $(this).css({"background-color":"#7a6ad8", "color":"#fff"}); }); }
 
             $("#courseForm").on("submit", function (e) {
                 e.preventDefault();
-                $.ajax({
-                    url: API_BASE, method: "POST", contentType: "application/json",
-                    data: JSON.stringify({
-                        name: $("#courseName").val(),
-                        description: $("#courseDesc").val(),
-                        categoryId: parseInt($("#courseCategory").val())
-                    }),
-                    beforeSend: function () { $("#btnSave").prop("disabled", true).text("İşleniyor..."); },
-                    success: function () {
-                        $("#courseModal").modal("hide");
-                        $("#courseForm")[0].reset();
-                        showToast("Başarılı", "Kurs oluşturuldu.", "success");
-                        loadCourses(1);
-                    },
-                    error: function (err) { handleError(err); },
-                    complete: function () { $("#btnSave").prop("disabled", false).text("Kaydet"); }
+                $.ajax({ url: API_BASE, method: "POST", contentType: "application/json", data: JSON.stringify({ name: $("#courseName").val(), description: $("#courseDesc").val(), categoryId: parseInt($("#courseCategory").val()) }),
+                    success: function () { $("#courseModal").modal("hide"); $("#courseForm")[0].reset(); Swal.fire('Başarılı','Kurs oluşturuldu','success'); loadCourses(1); }
                 });
             });
-
             $("#editCourseForm").on("submit", function (e) {
-                e.preventDefault();
-                const id = $("#editCourseId").val();
-                $.ajax({
-                    url: `${API_BASE}/${id}`, method: "PUT", contentType: "application/json",
-                    data: JSON.stringify({
-                        id: parseInt(id),
-                        name: $("#editCourseName").val(),
-                        description: $("#editCourseDesc").val(),
-                        categoryId: parseInt($("#editCourseCategory").val()),
-                        rowVersion: $("#editCourseRowVersion").val()
-                    }),
-                    beforeSend: function () { $("#btnUpdate").prop("disabled", true).text("Güncelleniyor..."); },
-                    success: function () {
-                        $("#editCourseModal").modal("hide");
-                        showToast("Başarılı", "Kurs güncellendi.", "success");
-                        loadCourses(currentPage);
-                    },
-                    error: function (err) { handleError(err); },
-                    complete: function () { $("#btnUpdate").prop("disabled", false).text("Güncelle"); }
+                e.preventDefault(); const id = $("#editCourseId").val();
+                $.ajax({ url: `${API_BASE}/${id}`, method: "PUT", contentType: "application/json", data: JSON.stringify({ id: parseInt(id), name: $("#editCourseName").val(), description: $("#editCourseDesc").val(), categoryId: parseInt($("#editCourseCategory").val()), rowVersion: $("#editCourseRowVersion").val() }),
+                    success: function () { $("#editCourseModal").modal("hide"); Swal.fire('Başarılı','Kurs güncellendi','success'); loadCourses(1); }
                 });
             });
         });
 
-        function loadCategories() {
-            $.ajax({
-                url: CAT_API_BASE,
-                method: "GET",
-                success: function (data) {
-                    let html = '<option value="">Tüm Kategoriler / Seçin...</option>';
-                    data.forEach(c => {
-                        html += `<option value="${c.id}">${c.name}</option>`;
-                    });
-                    $("#filterCategoryDropdown").html(html);
-                    $("#courseCategory").html(html);
-                    $("#editCourseCategory").html(html);
-                }
-            });
-        }
-
-        function switchTab(tabName) {
-            CURRENT_TAB = tabName;
-            $("#searchInput").val('');
-            $("#filterCategoryDropdown").val('');
-            applyFiltersAndRender();
-        }
+        function loadCategories() { $.ajax({ url: CAT_API_BASE, method: "GET", success: function (data) { let html = '<option value="">Tüm Kategoriler / Seçin...</option>'; data.forEach(c => { html += `<option value="${c.id}">${c.name}</option>`; }); $("[id$=CategoryDropdown], #courseCategory, #editCourseCategory").html(html); }}); }
+        function switchTab(tabName) { CURRENT_TAB = tabName; $("#searchInput").val(''); $("#filterCategoryDropdown").val(''); applyFiltersAndRender(); }
 
         async function loadCourses(page = 1) {
-            currentPage = page;
             try {
-                $("#courseTableBody").html('<tr><td colspan="6" class="text-center py-4"><i class="fas fa-spinner fa-spin text-primary mr-2"></i> Kurslar Yükleniyor...</td></tr>');
-                $("#courseTableBody").css("opacity", "0.5");
-
-                const res = await $.ajax({ url: `${API_BASE}?pageNumber=${page}&pageSize=${pageSize}`, method: "GET" });
-
-                const allData = res.data || [];
-                globalAllCourses = allData;
-
-                if(USER_ROLE === "Student") {
-                    globalMyCourses = allData;
-                }
-
+                if(USER_ROLE !== "Student") { $("#courseTableBody").html('<tr><td colspan="6" class="text-center py-4"><i class="fas fa-spinner fa-spin text-primary mr-2"></i>Yükleniyor...</td></tr>'); }
+                const resAll = await $.ajax({ url: `${API_BASE}?pageNumber=${page}&pageSize=50`, method: "GET" });
+                globalAllCourses = resAll.data || [];
+                if(USER_ROLE === "Student") { const resMine = await $.ajax({ url: `https://localhost:7113/api/Dashboard/student`, method: "GET" }); globalMyCourses = resMine.myCourses || []; }
                 applyFiltersAndRender();
-                renderPagination(res.totalCount || 0, res.pageNumber || 1, res.totalPages || 1);
-             } catch (err) {
-                 handleError(err);
-             } finally {
-                 $("#courseTableBody").css("opacity", "1");
-             }
+            } catch (err) { console.log(err); }
         }
 
         function applyFiltersAndRender() {
             let baseData = CURRENT_TAB === "MY_COURSES" ? globalMyCourses : globalAllCourses;
             let filtered = [...baseData];
-
-            // 1. Text Search (Metin Araması)
             const searchText = $("#searchInput").val().toLowerCase();
-            if (searchText) {
-                filtered = filtered.filter(c => c.name.toLowerCase().includes(searchText) || c.description.toLowerCase().includes(searchText));
-            }
-
-            // 2. Kategori Filtresi
+            if (searchText) filtered = filtered.filter(c => c.name.toLowerCase().includes(searchText));
             const selectedCategoryId = $("#filterCategoryDropdown").val();
-            if (selectedCategoryId) {
-                filtered = filtered.filter(c => c.categoryId === parseInt(selectedCategoryId));
-            }
+            if (selectedCategoryId) filtered = filtered.filter(c => c.categoryId === parseInt(selectedCategoryId));
 
-            // 3. Sıralama
-            const sortBy = $("#sortDropdown").val();
-            filtered.sort((a, b) => {
-                if (sortBy === "date_desc") return new Date(b.created) - new Date(a.created);
-                if (sortBy === "date_asc") return new Date(a.created) - new Date(b.created);
-                if (sortBy === "name_asc") return a.name.localeCompare(b.name);
-                return 0;
-            });
-
-            let html = "";
-            if (filtered.length === 0) {
-                html = `<tr><td colspan="6" class="text-center text-muted py-4">Gösterilecek kurs bulunamadı.</td></tr>`;
-            } else {
-                let enrolledIds = globalMyCourses.map(c => c.id);
-
-                filtered.forEach(item => {
-                    const createdDate = new Date(item.created).toLocaleDateString('tr-TR');
-                    html += `
-                        <tr>
-                            <td><strong class="text-dark">${item.name}</strong></td>
-                            <td><span class="badge badge-info p-2">${item.categoryName || 'Kategorisiz'}</span></td>
-                            <td>${item.description}</td>
-                            <td><span class="badge badge-secondary p-2">${item.teacherFullName || 'Atanmadı'}</span></td>
-                            <td>${createdDate}</td>
-                            <td>${renderActions(item, enrolledIds)}</td>
-                        </tr>`;
-                });
-            }
-            $("#courseTableBody").html(html);
-        }
-
-        function renderPagination(totalCount, current, totalPages) {
-            if (totalPages <= 1) {
-                $("#paginationContainer").html("");
-                $("#pageInfo").text("");
-                return;
-            }
-
-            let html = `<li class="page-item ${current === 1 ? 'disabled' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadCourses(${current - 1})">Önceki</a></li>`;
-            for (let i = 1; i <= totalPages; i++) {
-                html += `<li class="page-item ${i === current ? 'active' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadCourses(${i})">${i}</a></li>`;
-            }
-            html += `<li class="page-item ${current === totalPages ? 'disabled' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadCourses(${current + 1})">Sonraki</a></li>`;
-
-            $("#paginationContainer").html(html);
-            const startItem = (current - 1) * pageSize + 1;
-            const endItem = Math.min(current * pageSize, totalCount);
-            $("#pageInfo").text(`Toplam ${totalCount} kurstan ${startItem}-${endItem} arası gösteriliyor.`);
-        }
-
-        function renderActions(item, enrolledIds) {
-            let actions = "";
-            if (USER_ROLE === "Admin" || USER_ROLE === "Teacher") {
-                actions += `<a href="/Assignments?courseId=${item.id}" class="btn btn-sm btn-info text-white mr-1"><i class="fas fa-tasks mr-1"></i>Ödevler</a>`;
-                actions += `<button class="btn btn-sm btn-warning mr-1 text-dark" onclick="openEditModal(${item.id})"><i class="fas fa-edit"></i></button>`;
-                actions += `<button class="btn btn-sm btn-danger" onclick="deleteCourse(${item.id})"><i class="fas fa-trash"></i></button>`;
-            } else if (USER_ROLE === "Student") {
-                if (CURRENT_TAB === "MY_COURSES") {
-                    actions += `<a href="/Assignments?courseId=${item.id}" class="btn btn-sm btn-primary"><i class="fas fa-tasks mr-1"></i>Ödevlere Git</a>`;
-                } else {
-                    if (enrolledIds.includes(item.id)) {
-                        actions += `<span class="badge badge-success p-2"><i class="fas fa-check mr-1"></i>Kayıtlısınız</span>`;
-                    } else {
-                        actions += `<button class="btn btn-sm btn-success" onclick="enroll(${item.id})"><i class="fas fa-plus mr-1"></i>Kayıt Ol</button>`;
-                    }
+            if(USER_ROLE === "Student") {
+                let html = "";
+                if (filtered.length === 0) { html = `<div class="col-12 text-center text-muted py-5">Kurs bulunamadı.</div>`; }
+                else {
+                    let enrolledIds = globalMyCourses.map(c => c.id);
+                    filtered.forEach((c, index) => {
+                        let imgNum = (index % 6) + 1; let imgSrc = `/scholar/assets/images/course-0${imgNum}.jpg`; let isEnrolled = enrolledIds.includes(c.id);
+                        let actionBtn = CURRENT_TAB === "MY_COURSES" || isEnrolled ? `<a href="/Assignments?courseId=${c.id}" class="btn btn-sm btn-block text-white font-weight-bold" style="background-color:#1cc88a; border-radius:20px;">Ödevlere Git</a>` : `<button class="btn btn-sm btn-block text-white font-weight-bold" style="background-color:#7a6ad8; border-radius:20px;" onclick="enroll(${c.id})">Kayıt Ol</button>`;
+                        html += `<div class="col-lg-4 col-md-6 mb-4 fade-in"><div class="student-card h-100" style="background:#fff; border-radius:15px; overflow:hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05);"><img src="${imgSrc}" style="width:100%; height:180px; object-fit:cover;"><div class="p-4"><span class="badge mb-2" style="background-color:rgba(122,106,216,0.1); color:#7a6ad8; padding:8px 12px; border-radius:10px;">${c.categoryName || 'Genel'}</span><h5 class="font-weight-bold mb-2" style="color:#333;">${c.name}</h5><p class="text-muted small mb-3">${c.description}</p><div class="border-top pt-3 mt-3">${actionBtn}</div></div></div></div>`;
+                    });
                 }
+                $("#studentCourseList").html(html);
+            } else {
+                let html = "";
+                if (filtered.length === 0) { html = `<tr><td colspan="6" class="text-center text-muted py-4">Gösterilecek kurs bulunamadı.</td></tr>`; }
+                else {
+                    filtered.forEach(item => {
+                        const createdDate = new Date(item.created).toLocaleDateString('tr-TR');
+                        let actions = `<a href="/Assignments?courseId=${item.id}" class="btn btn-sm btn-info text-white mr-1"><i class="fas fa-tasks"></i></a> <button class="btn btn-sm btn-warning text-dark mr-1" onclick="openEditModal(${item.id})"><i class="fas fa-edit"></i></button> <button class="btn btn-sm btn-danger" onclick="deleteCourse(${item.id})"><i class="fas fa-trash"></i></button>`;
+                        html += `<tr><td><strong class="text-dark">${item.name}</strong></td><td><span class="badge badge-info p-2">${item.categoryName || 'Kategorisiz'}</span></td><td>${item.description}</td><td><span class="badge badge-secondary p-2">${item.teacherFullName || 'Atanmadı'}</span></td><td>${createdDate}</td><td>${actions}</td></tr>`;
+                    });
+                }
+                $("#courseTableBody").html(html);
             }
-            return actions;
         }
 
         function openEditModal(id) {
             const course = globalAllCourses.find(c => c.id === id);
-            if (course) {
-                $("#editCourseId").val(course.id);
-                $("#editCourseName").val(course.name);
-                $("#editCourseDesc").val(course.description);
-                $("#editCourseCategory").val(course.categoryId);
-                $("#editCourseRowVersion").val(course.rowVersion);
-                $("#editCourseModal").modal("show");
-            }
+            if (course) { $("#editCourseId").val(course.id); $("#editCourseName").val(course.name); $("#editCourseDesc").val(course.description); $("#editCourseCategory").val(course.categoryId); $("#editCourseRowVersion").val(course.rowVersion); $("#editCourseModal").modal("show"); }
         }
 
         function deleteCourse(id) {
-            Swal.fire({
-                title: 'Emin misiniz?', text: "Bu kursu silerseniz, içindeki veriler kaybolabilir!", icon: 'warning',
-                showCancelButton: true, confirmButtonColor: '#e74a3b', cancelButtonColor: '#858796', confirmButtonText: 'Evet, Sil!', cancelButtonText: 'İptal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({ url: `${API_BASE}/${id}`, method: "DELETE", success: function() { showToast("Silindi", "Kurs başarıyla silindi.", "danger"); loadCourses(currentPage); }, error: function(err) { handleError(err); } });
-                }
+            Swal.fire({ title: 'Emin misiniz?', text: "Kurs silinecek!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#e74a3b', confirmButtonText: 'Sil' }).then((result) => {
+                if (result.isConfirmed) { $.ajax({ url: `${API_BASE}/${id}`, method: "DELETE", success: function() { Swal.fire('Silindi','','success'); loadCourses(1); } }); }
             });
         }
-
-        function enroll(id) {
-            $.ajax({ url: `${API_BASE}/${id}/enroll`, method: "POST", success: function() { showToast("Başarılı", "Kursa başarıyla kayıt oldunuz!", "success"); loadCourses(currentPage); }, error: function(err) { handleError(err); } });
-        }
-
-        function handleError(err) {
-            let errorMsg = "İşlem sırasında beklenmeyen bir hata oluştu.";
-            if (err.responseJSON) {
-                if (err.responseJSON.errors) errorMsg = Object.values(err.responseJSON.errors).flat().join("<br>");
-                else if (err.responseJSON.detail) errorMsg = err.responseJSON.detail;
-                else if (err.responseJSON.message) errorMsg = err.responseJSON.message;
-            } else if (err.status === 403) {
-                errorMsg = "Bu işlemi gerçekleştirmek için yetkiniz yok.";
-            }
-            showToast("İşlem Başarısız", errorMsg, "danger");
-        }
-
-        function showToast(title, message, type) {
-            let swalIcon = type === 'danger' ? 'error' : type;
-            let bgColor = type === 'danger' ? '#e74a3b' : (type === 'success' ? '#1cc88a' : '#f6c23e');
-            let txtColor = type === 'warning' ? '#3a3b45' : '#ffffff';
-            const Toast = Swal.mixin({ toast: true, position: 'bottom-end', showConfirmButton: false, timer: 5000, timerProgressBar: true, background: bgColor, color: txtColor, iconColor: txtColor, didOpen: (toast) => { toast.addEventListener('mouseenter', Swal.stopTimer); toast.addEventListener('mouseleave', Swal.resumeTimer); } });
-            Toast.fire({ icon: swalIcon, title: title, text: message });
-        }
+        function enroll(id) { $.ajax({ url: `${API_BASE}/${id}/enroll`, method: "POST", success: function() { Swal.fire('Tebrikler!', 'Kayıt oldunuz.', 'success'); loadCourses(1); }}); }
     </script>
 }

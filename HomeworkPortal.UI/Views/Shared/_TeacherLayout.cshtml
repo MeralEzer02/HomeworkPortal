@@ -1,0 +1,253 @@
+﻿@using Microsoft.AspNetCore.Http
+@using System.Text.Json
+@using System.Text
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var token = HttpContextAccessor.HttpContext?.Session.GetString("Token");
+    var userRole = "Teacher";
+    var userEmail = "Kullanıcı";
+    var currentPath = HttpContextAccessor.HttpContext?.Request.Path.Value?.ToLower() ?? "";
+
+    if (!string.IsNullOrEmpty(token))
+    {
+        try
+        {
+            var payload = token.Split('.')[1];
+            payload = payload.Replace('-', '+').Replace('_', '/');
+            payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+            var bytes = Convert.FromBase64String(payload);
+            var json = Encoding.UTF8.GetString(bytes);
+            var parsed = JsonSerializer.Deserialize<JsonElement>(json);
+
+            if (parsed.TryGetProperty("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", out var emailProp))
+                userEmail = emailProp.GetString() ?? "Öğretmen";
+            else if (parsed.TryGetProperty("email", out emailProp))
+                userEmail = emailProp.GetString() ?? "Öğretmen";
+        }
+        catch { }
+    }
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>HW Portal - Öğretmen Portalı</title>
+    <link href="~/Admin/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+    <link href="~/Admin/css/sb-admin-2.min.css" rel="stylesheet">
+    <style>
+        .toast-container {
+            z-index: 1055 !important;
+        }
+
+        ul.navbar-nav.bg-gradient-primary {
+            background-color: #0a2896 !important;
+            background-image: linear-gradient(180deg, #0a2896 10%, #051650 100%) !important;
+        }
+
+        .text-primary, .btn-link {
+            color: #0a2896 !important;
+        }
+
+        .btn-primary {
+            background-color: #0a2896 !important;
+            border-color: #0a2896 !important;
+        }
+
+            .btn-primary:hover {
+                background-color: #081e70 !important;
+                border-color: #081e70 !important;
+            }
+
+        .card.border-left-primary {
+            border-left-color: #0a2896 !important;
+        }
+        /* DARK MODE */
+        body.dark-mode {
+            background-color: #121212 !important;
+            color: #e0e0e0 !important;
+        }
+
+            body.dark-mode #wrapper #content-wrapper {
+                background-color: #1a1a1c !important;
+            }
+
+            body.dark-mode .bg-white, body.dark-mode .bg-light, body.dark-mode .card, body.dark-mode .card-header, body.dark-mode .navbar, body.dark-mode .modal-content, body.dark-mode .dropdown-menu, body.dark-mode .alert {
+                background-color: #26262a !important;
+                border-color: #3a3a40 !important;
+                color: #e0e0e0 !important;
+            }
+
+            body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode h4, body.dark-mode h5, body.dark-mode h6, body.dark-mode .text-gray-800, body.dark-mode .text-gray-900, body.dark-mode .text-dark {
+                color: #f8f9fc !important;
+            }
+
+            body.dark-mode .text-muted, body.dark-mode .text-gray-600 {
+                color: #a0a0a0 !important;
+            }
+
+            body.dark-mode .text-primary {
+                color: #64b5f6 !important;
+            }
+
+            body.dark-mode .table td, body.dark-mode .table th {
+                background-color: #26262a !important;
+                color: #e0e0e0 !important;
+                border-color: #444 !important;
+            }
+
+            body.dark-mode .table-hover tbody tr:hover td, body.dark-mode .table-hover tbody tr:hover th {
+                background-color: #34343a !important;
+                color: #fff !important;
+            }
+
+            body.dark-mode .table thead.thead-dark th {
+                background-color: #111 !important;
+                border-color: #222 !important;
+                color: #fff !important;
+            }
+
+            body.dark-mode .form-control {
+                background-color: #333 !important;
+                border-color: #555 !important;
+                color: #fff !important;
+            }
+
+            body.dark-mode .dropdown-item {
+                color: #e0e0e0 !important;
+            }
+
+            body.dark-mode .btn-primary {
+                color: #fff !important;
+                background-color: #2e59d9 !important;
+                border-color: #2e59d9 !important;
+            }
+
+            body.dark-mode .swal2-popup {
+                background-color: #26262a !important;
+                color: #e0e0e0 !important;
+            }
+
+            body.dark-mode .swal2-title, body.dark-mode .swal2-html-container {
+                color: #e0e0e0 !important;
+            }
+    </style>
+</head>
+
+<body id="page-top">
+    <div id="wrapper">
+        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="/Home/Index">
+                <div class="sidebar-brand-icon"><i class="fas fa-chalkboard-teacher"></i></div>
+                <div class="sidebar-brand-text mx-3">Öğretmen</div>
+            </a>
+            <hr class="sidebar-divider my-0">
+            <li class="nav-item @(currentPath == "/" || currentPath.Contains("/home") ? "active" : "")">
+                <a class="nav-link" href="/Home/Index"><i class="fas fa-fw fa-tachometer-alt"></i><span>Ana Ekran</span></a>
+            </li>
+            <hr class="sidebar-divider">
+            <div class="sidebar-heading">Eğitim Yönetimi</div>
+            <li class="nav-item @(currentPath.Contains("/courses") ? "active" : "")">
+                <a class="nav-link" href="/Courses"><i class="fas fa-fw fa-book-open"></i><span>Verdiğim Dersler</span></a>
+            </li>
+            <li class="nav-item @(currentPath.Contains("/assignments") ? "active" : "")">
+                <a class="nav-link" href="/Assignments"><i class="fas fa-fw fa-tasks"></i><span>Ödevlerim</span></a>
+            </li>
+            <li class="nav-item @(currentPath.Contains("/submissions") ? "active" : "")">
+                <a class="nav-link" href="/Submissions"><i class="fas fa-fw fa-check-square"></i><span>Öğrenci Teslimleri</span></a>
+            </li>
+            <hr class="sidebar-divider">
+            <div class="sidebar-heading">Sınıf Yönetimi</div>
+            <li class="nav-item @(currentPath.Contains("/users") ? "active" : "")">
+                <a class="nav-link" href="/Users"><i class="fas fa-fw fa-users"></i><span>Öğrencilerim</span></a>
+            </li>
+            <hr class="sidebar-divider d-none d-md-block">
+            <div class="text-center d-none d-md-inline"><button class="rounded-circle border-0" id="sidebarToggle"></button></div>
+        </ul>
+
+        <div id="content-wrapper" class="d-flex flex-column">
+            <div id="content">
+                <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3"><i class="fa fa-bars"></i></button>
+                    <ul class="navbar-nav ml-auto">
+                        <li class="nav-item dropdown no-arrow mx-1"><a class="nav-link" href="#" id="darkModeToggle"><i class="fas fa-moon fa-lg text-gray-600" id="darkModeIcon"></i></a></li>
+                        <li class="nav-item dropdown no-arrow mx-1">
+                            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button" data-toggle="dropdown"><i class="fas fa-bell fa-fw text-gray-600"></i><span class="badge badge-danger badge-counter" id="notificationBadge" style="display:none;">0</span></a>
+                            <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in"><h6 class="dropdown-header bg-primary border-primary">Bildirim Merkezi</h6><div id="notificationItemsContainer"></div></div>
+                        </li>
+                        <div class="topbar-divider d-none d-sm-block"></div>
+                        <li class="nav-item dropdown no-arrow">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown">
+                                <span class="mr-2 d-none d-lg-inline text-gray-600 small"><strong>@userEmail.Split('@')[0]</strong> <br><small class="text-primary">@userRole</small></span>
+                                <img class="img-profile rounded-circle" src="~/Admin/img/undraw_profile.svg">
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in">
+                                <a class="dropdown-item" href="/Profile"><i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i> Profilim</a>
+                                <a class="dropdown-item text-danger" href="/Auth/Logout"><i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-danger"></i> Çıkış Yap</a>
+                            </div>
+                        </li>
+                    </ul>
+                </nav>
+                <div class="container-fluid">@RenderBody()</div>
+            </div>
+            <footer class="sticky-footer bg-white"><div class="container my-auto"><div class="copyright text-center my-auto"><span>Copyright &copy; HomeworkPortal 2026</span></div></div></footer>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/Admin/vendor/jquery/jquery.min.js"></script>
+    <script src="~/Admin/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/Admin/js/sb-admin-2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+
+    <script>
+        var jwtToken = "@Html.Raw(token)";
+        $.ajaxPrefilter(function (options, originalOptions, jqXHR) {
+            if (jwtToken && options.url.includes("7113")) {
+                jqXHR.setRequestHeader('Authorization', 'Bearer ' + jwtToken);
+            }
+        });
+        $(document).ajaxError(function (event, xhr, settings) {
+            if (settings.url.includes("7113") && xhr.status === 401) {
+                window.location.href = "/Auth/Login";
+            }
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+    <script>
+        $(document).ready(function() {
+            // Gece Modu Kontrolü
+            if(localStorage.getItem("darkmode") === "true"){
+                 $("body").addClass("dark-mode");
+                 $("#darkModeIcon").removeClass("fa-moon text-gray-600").addClass("fa-sun text-warning");
+            }
+            $("#darkModeToggle").click(function(e){
+                e.preventDefault();
+                $("body").toggleClass("dark-mode");
+                let isDark = $("body").hasClass("dark-mode");
+                if(isDark) { $("#darkModeIcon").removeClass("fa-moon text-gray-600").addClass("fa-sun text-warning"); }
+                else { $("#darkModeIcon").removeClass("fa-sun text-warning").addClass("fa-moon text-gray-600"); }
+                localStorage.setItem("darkmode", isDark);
+            });
+
+            // Bildirim Kontrolü
+            $("#alertsDropdown").click(function(e){
+                e.preventDefault();
+                $("#notificationBadge").hide();
+                $("#notificationItemsContainer").html(`
+                    <a class="dropdown-item d-flex align-items-center" href="#">
+                        <div class="mr-3"><div class="icon-circle bg-success"><i class="fas fa-check text-white"></i></div></div>
+                        <div><div class="small text-gray-500">Bugün</div>Sistem başarıyla güncellendi ve tüm krizler çözüldü!</div>
+                    </a>
+                `);
+            });
+        });
+    </script>
+</body>
+</html>

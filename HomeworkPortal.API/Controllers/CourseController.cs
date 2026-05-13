@@ -33,6 +33,7 @@ namespace HomeworkPortal.API.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetCourses([FromQuery] PaginationParams paginationParams)
         {
             var result = await _courseService.GetCoursesAsync(paginationParams);
@@ -40,6 +41,7 @@ namespace HomeworkPortal.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetCourseDetails(int id)
         {
             var result = await _courseService.GetCourseDetailsAsync(id);
