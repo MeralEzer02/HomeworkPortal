@@ -33,12 +33,14 @@
         body {
             background-color: #f4f7fb;
             font-family: 'Poppins', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .student-navbar {
             background-color: #7a6ad8;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             padding: 15px 0;
+            transition: background-color 0.3s ease;
         }
 
             .student-navbar .navbar-brand {
@@ -87,7 +89,7 @@
             border-radius: 15px;
             border: none;
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            transition: transform 0.3s;
+            transition: transform 0.3s, background-color 0.3s, color 0.3s;
             overflow: hidden;
         }
 
@@ -118,6 +120,105 @@
                 transform: translateY(0);
             }
         }
+
+        /* DARK MODE (GECE MODU) KODLARI */
+        body.dark-mode {
+            background-color: #121212 !important;
+            color: #e0e0e0 !important;
+        }
+
+            body.dark-mode .student-navbar {
+                background-color: #1f1f1f !important;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            }
+
+                body.dark-mode .student-navbar .navbar-brand i {
+                    color: #e0e0e0 !important;
+                }
+
+            body.dark-mode h1, body.dark-mode h2, body.dark-mode h3,
+            body.dark-mode h4, body.dark-mode h5, body.dark-mode h6,
+            body.dark-mode .student-card *, body.dark-mode .student-card p {
+                color: #f8f9fc !important;
+            }
+
+            body.dark-mode strong {
+                color: #fff !important;
+            }
+
+            body.dark-mode .student-card,
+            body.dark-mode .modal-content {
+                background-color: #26262a !important;
+                color: #e0e0e0 !important;
+                border-color: #3a3a40 !important;
+            }
+
+            body.dark-mode .bg-white,
+            body.dark-mode .bg-light,
+            body.dark-mode .card,
+            body.dark-mode .card-body,
+            body.dark-mode .modal-body,
+            body.dark-mode .modal-header,
+            body.dark-mode .modal-footer {
+                background-color: #26262a !important;
+                color: #e0e0e0 !important;
+                border-color: #3a3a40 !important;
+            }
+
+            body.dark-mode .nav-tabs .nav-link {
+                color: #a0a0a0 !important;
+                border-color: transparent !important;
+            }
+
+                body.dark-mode .nav-tabs .nav-link.active {
+                    background-color: #26262a !important;
+                    color: #fff !important;
+                    border-color: #3a3a40 #3a3a40 transparent #3a3a40 !important;
+                }
+
+            body.dark-mode .table {
+                color: #e0e0e0 !important;
+                background-color: transparent !important;
+            }
+
+                body.dark-mode .table td, body.dark-mode .table th {
+                    border-top: 1px solid #3a3a40 !important;
+                }
+
+            body.dark-mode .table-bordered,
+            body.dark-mode .table-bordered td,
+            body.dark-mode .table-bordered th {
+                border: 1px solid #3a3a40 !important;
+            }
+
+            body.dark-mode .table-striped tbody tr:nth-of-type(odd) {
+                background-color: rgba(255,255,255,0.03) !important;
+            }
+
+            body.dark-mode .text-danger, body.dark-mode a.text-danger {
+                color: #ea918c !important;
+            }
+
+            body.dark-mode .text-muted {
+                color: #a0a0a0 !important;
+            }
+
+            body.dark-mode .card-header-purple {
+                background-color: #3a3b45 !important;
+            }
+
+            body.dark-mode .form-control,
+            body.dark-mode .form-control-file {
+                background-color: #333 !important;
+                border-color: #555 !important;
+                color: #fff !important;
+            }
+
+            body.dark-mode .btn-logout {
+                background-color: #333;
+                color: #fff !important;
+                border: 1px solid #555;
+            }
     </style>
 </head>
 <body>
@@ -134,7 +235,14 @@
                     <li class="nav-item"><a class="nav-link @(currentPath.Contains("/courses") ? "active" : "")" href="/Courses">Kurslarım</a></li>
                     <li class="nav-item"><a class="nav-link @(currentPath.Contains("/assignments") ? "active" : "")" href="/Assignments">Ödevlerim</a></li>
                     <li class="nav-item"><a class="nav-link @(currentPath.Contains("/submissions") ? "active" : "")" href="/Submissions">Notlarım</a></li>
-                    <li class="nav-item ml-lg-4 mt-2 mt-lg-0"><a class="btn btn-logout" href="/Auth/Logout"><i class="fas fa-sign-out-alt mr-1"></i> Çıkış Yap</a></li>
+
+                    <li class="nav-item mx-lg-3 my-2 my-lg-0">
+                        <a class="nav-link" href="#" id="darkModeToggle" title="Gece/Gündüz Modu" style="font-size: 1.2rem;">
+                            <i class="fas fa-moon" id="darkModeIcon"></i>
+                        </a>
+                    </li>
+
+                    <li class="nav-item ml-lg-2"><a class="btn btn-logout" href="/Auth/Logout"><i class="fas fa-sign-out-alt mr-1"></i> Çıkış Yap</a></li>
                 </ul>
             </div>
         </div>
@@ -155,6 +263,31 @@
         });
         $(document).ajaxError(function (event, xhr, settings) {
             if (settings.url.includes("7113") && xhr.status === 401) { window.location.href = "/Auth/Login"; }
+        });
+
+        // GECE MODU (DARK MODE) JAVASCRIPT MOTORU
+        $(document).ready(function () {
+            const currentTheme = localStorage.getItem('theme');
+
+            if (currentTheme === 'dark') {
+                $('body').addClass('dark-mode');
+                $('#darkModeIcon').removeClass('fa-moon').addClass('fa-sun text-warning');
+            }
+
+            $('#darkModeToggle').click(function (e) {
+                e.preventDefault();
+                $('body').toggleClass('dark-mode');
+
+                let theme = 'light';
+                if ($('body').hasClass('dark-mode')) {
+                    theme = 'dark';
+                    $('#darkModeIcon').removeClass('fa-moon').addClass('fa-sun text-warning');
+                } else {
+                    $('#darkModeIcon').removeClass('fa-sun text-warning').addClass('fa-moon');
+                }
+
+                localStorage.setItem('theme', theme);
+            });
         });
     </script>
     @await RenderSectionAsync("Scripts", required: false)
